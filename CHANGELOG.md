@@ -1,5 +1,108 @@
 # Changelog
 
+## 1.8.4 - 2026-09-18
+
+- Aligned the scanner's nested-link text handling with axe-core and Chromium accessibility-tree behavior for computed `display`, `visibility`, and `aria-hidden` state.
+- Added explicit report evidence when source text exists but responsive CSS removes that text from the accessibility tree, avoiding the misleading appearance that ordinary nested `<span>` text was rejected.
+- Added real-browser, Chromium accessibility-tree, and axe-core 4.13 regressions proving that visible nested link text passes while the same text hidden with `display:none` fails.
+- Re-ran the affected L'Oréal page at desktop, mobile, and 320-pixel reflow sizes; the link passes at desktop and remains a confirmed mobile/reflow failure because its only label is hidden at those breakpoints.
+
+## 1.8.3 - 2026-09-18
+
+- Persisted landing-page setup drafts for existing and new repositories, including multi-page URL lists and generated workflow fields.
+- Added newline-delimited and JSON-array multi-URL support to the GitHub Action and reusable workflow so every authorized URL is audited in one run.
+- Tightened responsive clipping, text-resize, table, and keyboard evidence gates; removed non-actionable empty-fragment link candidates; and consolidated repeated root causes without discarding their affected scope.
+- Advanced the Audit Quality Contract to 1.2.0 and added regressions for repeatability, geometry, false-positive suppression, multi-URL parsing, report parity, and the packaged Action.
+- Reclassified the supplied L'Oréal validation sample from 102 unverified review rows to 15 confirmed failures, 3 review candidates, 1 execution blocker, and 4 additional confirmed findings produced by the corrected scan; repeated representations are consolidated in the final report.
+
+## 1.8.2 - 2026-09-14
+
+- Published the compiled landing-page snapshot on public `main` as well as the `gh-pages` branch while keeping the editable site source private.
+- Added stable, release-hosted Claude Desktop ZIP and checksum filenames so the landing page always downloads the current validated package.
+- Regenerated the public Claude and GitHub Copilot marketplace payloads from the same release source.
+
+## 1.8.1 - 2026-09-14
+
+- Replaced inconsistent repository, Action, plugin, Marketplace, skill, command, and MCP metadata with one accurate product identity: an evidence-backed accessibility pre-audit.
+- Corrected stale workbook claims to the current seven-sheet, 25-column report structure and added automated metadata drift checks to CI.
+- Added citation metadata and improved GitHub discovery metadata, release links, and Marketplace positioning without overstating automated WCAG conformance.
+
+## 1.8.0 - 2026-09-14
+
+- Added evidence provenance and canonical-result integrity validation, failure isolation, structured keyboard and task journeys, and deterministic finding consolidation.
+- Derived HTML, workbook, CSV, JSON, and SARIF output from one validated canonical result with complete accountability for all 55 WCAG 2.2 Level A and AA criteria.
+- Strengthened report presentation, severity treatment, release tests, and the two-run live BuggyLand regression while retaining the human-review boundary for conformance.
+
+## 1.7.0 - 2026-09-12
+
+- Added the repository's normative Audit Quality Master Contract, including the complete WCAG 2.2 A/AA accountability model, release gates, evidence requirements, and honest conformance boundary.
+- Centralised confidence gating so a result is confirmed only when its page state, detector authority, repeatability, evidence, applicability, impact, and deduplication checks are all valid; uncertain results remain review candidates or blockers.
+- Strengthened contrast and overlap validation, deterministic deduplication, screen-reader evidence validation, and keyboard, reflow, zoom, text-spacing, and interaction evidence.
+- Aligned canonical JSON, accessible HTML, and validated XLSX reports with the same provenance, confidence, severity, criterion, and evidence records.
+- Added executable contract tests, adversarial fixtures, native NVDA and VoiceOver workflows, fresh-consumer Action verification, and an exact two-run BuggyLand regression gate.
+
+## 1.6.2 - 2026-09-11
+
+- Made the default, 200% root text-resize, and WCAG text-spacing phases run against the rendered state even when a modal blocks underlying keyboard interactions.
+- Added explicit responsive-phase completion evidence and prevented the coverage matrix from claiming those phases ran when evidence is absent.
+- Stopped Chromium's generic transient resource-load console message from being misreported as an authored page error while preserving real JavaScript console and page errors.
+- Added regression coverage for blocked-page responsive execution and truthful incomplete-phase reporting.
+
+## 1.6.1 - 2026-09-11
+
+- Made the GitHub Action's process-level cancellation state authoritative, preventing a late SIGTERM received during output or summary writing from incorrectly exiting as a successful audit.
+
+## 1.6.0 - 2026-09-11
+
+- Added configurable, isolated site task journeys for keyboard operation, forms, interaction states, focus management, URL changes, input values, and scoped live-region DOM updates.
+- Added an independent 200% root-text responsive phase alongside 320-pixel reflow and WCAG text-spacing checks, retaining overflow and lost-functionality evidence.
+- Added Action inputs, reusable-workflow support, HTML evidence, documentation, and a deterministic BuggyLand keyboard/form/tabs/modal/status-message journey pack.
+- Extended unit, Chromium, and live BuggyLand regression contracts so configured journeys and their evidence cannot silently disappear or become inconclusive.
+
+## 1.5.1 - 2026-09-11
+
+- Corrected the WCAG criterion ledger so only retained confirmed failures can fail a criterion; review candidates and coverage blockers now remain explicitly inconclusive.
+- Tightened workbook and BuggyLand regression validation around all 55 active A/AA procedures, all 86 active WCAG 2.2 criteria, evidence provenance, viewport coverage, and the separation of disabled AAA advisory criteria.
+- Prevented failed or blocked page states, truncated link checks, and empty automated results from being presented as confirmed passes.
+- Re-ran the complete two-run live BuggyLand benchmark at desktop, mobile, and 320-pixel reflow sizes with identical validated HTML, XLSX, JSON, and ZIP outputs.
+
+## 1.5.0 - 2026-09-11
+
+- Added a criterion-specific human verification procedure and evidence prompt for every one of the 55 active WCAG 2.2 Level A and AA success criteria.
+- Exposed those evidence requirements in the accessible HTML report and validated Excel workbook, with every human verdict remaining `Not tested` until an auditor records a decision.
+- Added a coverage contract that rejects missing, duplicate, or underspecified A/AA procedures and clarified throughout the documentation and public site that automated results alone cannot establish conformance.
+- Refreshed the deterministic BuggyLand baseline for the intentional v1.4.1 false-positive reductions and made `npm run test:buggyland` execute the complete two-run live regression.
+
+## 1.4.1 - 2026-09-11
+
+- Prevented active consent and modal blockers from producing unreliable responsive findings against the obscured page underneath.
+- Excluded intentionally visually hidden assistive text from clipping detection, deduplicated responsive evidence across base and text-spacing states, and classified heuristic responsive signals as moderate review items rather than confirmed serious failures.
+- Reworked the Excel workbook as a professional triage document with severity and evidence-status colours, frozen navigation, readable evidence fields, banded tables, and clearer priority guidance.
+- Added unit, browser, Action-bundle, and workbook-format regressions for the corrected filtering and reporting behaviour.
+
+## 1.4.0 - 2026-09-10
+
+- Added a token-free landing-page generator that turns one public URL into a ready-to-paste GitHub Actions workflow and explains the complete run-to-report path.
+- Added a maintained reusable workflow so projects can run the audit with one URL, no checkout, no browser setup, and no repeated hostname input.
+- Derived the network allowlist securely from explicit audit URLs when `allowed-hosts` is omitted, while continuing to reject credential-bearing URLs.
+- Linked the uploaded HTML, Excel, JSON, screenshot, and ZIP evidence directly from the GitHub Actions run summary.
+- Added automated coverage for workflow generation and one-URL Action inputs, and validated the landing page at desktop, mobile, and 320-pixel reflow sizes.
+
+## 1.3.1 - 2026-09-10
+
+- Corrected the release lineage after `v1.3.0` was accidentally published from the previous `v1.2.1` source commit; `v1.3.0` is retained as withdrawn and must not be used.
+
+- Kept WCAG 2.2 Level AA as the public conformance target and separated optional AAA checks into clearly labelled advisory evidence.
+- Added a complete criterion-by-criterion WCAG 2.2 ledger to HTML, XLSX, and JSON reports with explicit failed, manual-review-required, not-applicable, and inconclusive outcomes and a mandatory-human conformance decision.
+- Replaced the generic keyboard sample with deterministic forward/reverse focus-order and bypass-block journeys, plus off-viewport focus evidence.
+- Expanded reflow and text-spacing evidence to retain clipping, overlap, lost interactive functionality, and focus visibility signals.
+- Added pinned Guidepup workflows for VoiceOver/WebKit on macOS and NVDA/Firefox on Windows with JSON, Markdown, HTML, and Playwright transcript artifacts.
+- Added deliberately passing and failing regression pages covering AA/AAA contrast separation, semantic failures, keyboard journeys, and reflow behaviour.
+
+## 1.3.0 - 2026-09-10
+
+- Withdrawn: this tag was accidentally created from the `v1.2.1` source commit before the intended v1.3 changes were pushed. Use `v1.2.1` until `v1.3.1` is available.
+
 ## 1.2.1 - 2026-09-09
 
 - Made axe-core execution reliable on pages with strict Content Security Policy headers.

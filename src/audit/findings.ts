@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { AxeNodeResult, AxeViolationResult, DisclosureCheckResult, ElementContext, Finding, PageAudit, Severity, ViewportAudit } from '../types.js';
+import type { AuditCheckId, AxeNodeResult, AxeViolationResult, DisclosureCheckResult, ElementContext, EvidenceItem, Finding, PageAudit, Severity, ViewportAudit } from '../types.js';
 
 function fingerprint(value: string): string {
   return createHash('sha1').update(value).digest('hex').slice(0, 12);
@@ -108,7 +108,7 @@ function axeRemediation(violation: AxeViolationResult): string {
     'aria-command-name': 'Give the control a concise accessible name that describes its action. Prefer visible text; otherwise use aria-labelledby to reference visible text or aria-label when no visible label is available.',
     'button-name': 'Give the button concise visible text that describes its action. If the button is icon-only, provide one accessible name with aria-label or aria-labelledby.',
     'input-button-name': 'Set a meaningful value on the input button or replace it with a native button containing descriptive visible text.',
-    'link-name': 'Give the link concise visible text that describes its destination. For an image-only link, provide a meaningful image alternative or label the link once without duplicating its name.',
+    'link-name': 'Give the link concise text that remains exposed to the accessibility tree. Do not hide its only label with display:none, visibility:hidden, or aria-hidden. If a responsive breakpoint intentionally makes the link icon-only, add an equivalent aria-label or valid aria-labelledby reference.',
     'image-alt': 'Add concise alt text that communicates the image purpose. Use alt="" only when the image is decorative and contributes no information or function.',
     label: 'Add a persistent visible label and associate it with the form control using native label markup and matching for/id values. Use aria-labelledby only when an existing visible label must be referenced.',
     'color-contrast': 'Change the foreground colour, background colour, font size, or font weight so normal text reaches at least 4.5:1 contrast and large text reaches at least 3:1 in every affected state.',
@@ -139,6 +139,20 @@ export function createSharedComponentKey(component: string, signature: string): 
 
 function openingTagSignature(html: string): string {
   return (html.trim().match(/^<[^>]+>/)?.[0] ?? html.trim()).replace(/\s+/g, ' ');
+}
+
+function linkNameDiagnostic(audit: ViewportAudit, node: AxeNodeResult): string {
+  const targetSelectors = new Set(node.target.map(normalizeComponent));
+  const match = audit.dom.emptyLinks.find((item) => (
+    targetSelectors.has(normalizeComponent(item.selector))
+    || [...targetSelectors].some((target) => normalizeComponent(item.selector).endsWith(target))
+    || openingTagSignature(item.html) === openingTagSignature(node.html)
+  ));
+  if (!match?.excludedNameSources?.length) return '';
+  const excluded = conciseList(match.excludedNameSources.map((source) => (
+    `${source.selector} contains “${source.text}” but is excluded because ${source.reason}`
+  )));
+  return `The source contains text, but it does not provide an accessible name at this viewport: ${excluded}.`;
 }
 
 interface ContrastDetails {
@@ -222,9 +236,67 @@ function assignmentForRule(ruleId: string): Finding['assignment'] {
   return 'Development';
 }
 
+function checkIdForEvidence(ruleId: string, kind: EvidenceItem['kind'], detail: string): AuditCheckId {
+  if (ruleId === 'page-unavailable') return 'navigation';
+  if (ruleId === 'interaction-coverage-blocked') return 'keyboard';
+  if (ruleId.startsWith('axe-')) return 'axe';
+  if (ruleId.startsWith('disclosure-')) return 'disclosures';
+  if (ruleId.startsWith('tabs-')) return 'tabs';
+  if (ruleId.startsWith('keyboard-journey-')) {
+    try {
+      const journey = JSON.parse(detail) as { source?: unknown };
+      return journey.source === 'configured' ? 'journeys' : 'keyboard';
+    } catch {
+      return 'keyboard';
+    }
+  }
+  if (ruleId.startsWith('link-destination-') || ruleId === 'link-broken-destination') return 'links';
+  if (ruleId.startsWith('responsive-') || ruleId.startsWith('text-spacing-') || ruleId.startsWith('text-resize-') || ruleId === 'horizontal-reflow-overflow') return 'responsive';
+  if (kind === 'keyboard') return 'keyboard';
+  if (kind === 'responsive') return 'responsive';
+  if (kind === 'network') return 'links';
+  return 'dom';
+}
+
+function evidenceState(checkId: AuditCheckId): string {
+  if (checkId === 'responsive') return 'responsive-stress-state';
+  if (['keyboard', 'disclosures', 'tabs', 'journeys'].includes(checkId)) return 'interaction-state';
+  return 'rendered-page-state';
+}
+
+function expectedForFinding(finding: Omit<Finding, 'key'>): string {
+  const explicit = /(?:^|\n)Expected:\s*(.+?)(?:\n|$)/i.exec(finding.testing)?.[1]?.trim();
+  return explicit || finding.remediation;
+}
+
 function makeFinding(input: Omit<Finding, 'key'> & { identity: string }): Finding {
   const { identity, ...finding } = input;
-  return { ...finding, key: `${finding.ruleId}:${fingerprint(identity)}` };
+  const evidence = finding.evidence.map((item) => {
+    const checkId = checkIdForEvidence(finding.ruleId, item.kind, item.detail);
+    const target = item.selector || 'page';
+    const observationId = fingerprint(JSON.stringify([
+      checkId,
+      finding.ruleId,
+      item.pageUrl,
+      item.viewport ?? '',
+      evidenceState(checkId),
+      target,
+      item.detail
+    ]));
+    return {
+      ...item,
+      provenance: {
+        observationId,
+        checkId,
+        ruleId: finding.ruleId,
+        state: evidenceState(checkId),
+        target,
+        observed: item.detail,
+        expected: expectedForFinding(finding)
+      }
+    };
+  });
+  return { ...finding, evidence, key: `${finding.ruleId}:${fingerprint(identity)}` };
 }
 
 function axeFindings(audit: ViewportAudit): Finding[] {
@@ -262,11 +334,13 @@ function axeFindings(audit: ViewportAudit): Finding[] {
         return makeFinding({
           identity: `color-contrast|${signature}`,
           ruleId: 'axe-color-contrast',
-          classification: 'confirmed',
-          severity: severityFromAxe(violation.impact),
+          classification: details ? 'confirmed' : 'review',
+          severity: details ? severityFromAxe(violation.impact) : 'Advisory',
           wcag: wcag.length ? wcag : ['1.4.3'],
-          summary: 'Shared text colour treatment has insufficient contrast',
-          issue: `The same rendered colour treatment is used by the listed text components and does not meet minimum contrast. ${actual}.`,
+          summary: details ? 'Shared text colour treatment has insufficient contrast' : 'Text contrast result needs measurement review',
+          issue: details
+            ? `The same rendered colour treatment is used by the listed text components and does not meet minimum contrast. ${actual}.`
+            : 'The automated engine returned a potential text contrast result without the complete rendered colour and ratio measurements required to confirm a failure.',
           impact: axeUserImpact(violation.id),
           testing: [
             `1. Open the affected page at the ${audit.viewport.name} viewport.`,
@@ -291,7 +365,7 @@ function axeFindings(audit: ViewportAudit): Finding[] {
             screenshot: screenshotFor(audit, node.target[0])
           })),
           assignment: 'Mixed',
-          effort: 'Medium',
+          effort: details ? 'Medium' : 'Review',
           translationRequired: 'No'
         });
       });
@@ -391,6 +465,8 @@ function axeFindings(audit: ViewportAudit): Finding[] {
     return [...groups.values()].map((group) => {
       const selectors = [...new Set(group.nodes.flatMap((node) => node.target.length ? node.target : ['page']))];
       const representative = group.nodes[0]!;
+      const nameDiagnostic = violation.id === 'link-name' ? linkNameDiagnostic(audit, representative) : '';
+      const issue = axeAccessibilityIssue(violation, representative.failureSummary);
       return makeFinding({
         identity: `${violation.id}|${group.component}|${group.failure}`,
         ruleId: `axe-${violation.id}`,
@@ -398,9 +474,14 @@ function axeFindings(audit: ViewportAudit): Finding[] {
         severity: severityFromAxe(violation.impact),
         wcag: wcag.length ? wcag : ['Best Practice'],
         summary: axeSummary(violation),
-        issue: axeAccessibilityIssue(violation, representative.failureSummary),
+        issue: nameDiagnostic ? `${issue} ${nameDiagnostic}` : issue,
         impact: axeUserImpact(violation.id),
-        testing: axeTesting(violation, audit, conciseList(selectors, 8), representative.failureSummary),
+        testing: axeTesting(
+          violation,
+          audit,
+          conciseList(selectors, 8),
+          nameDiagnostic ? `${representative.failureSummary ?? ''} ${nameDiagnostic}`.trim() : representative.failureSummary
+        ),
         remediation: `${axeRemediation(violation)} Retest the component in every affected state.`,
         component: group.component,
         sharedComponentKey: createSharedComponentKey(group.component, `${violation.id}|${group.failure}`),
@@ -412,7 +493,7 @@ function axeFindings(audit: ViewportAudit): Finding[] {
           pageUrl: audit.url,
           viewport: audit.viewport.name,
           selector: node.target.join(', '),
-          detail: node.html,
+          detail: [node.html, violation.id === 'link-name' ? linkNameDiagnostic(audit, node) : ''].filter(Boolean).join('\n'),
           screenshot: screenshotFor(audit, node.target[0])
         })),
         assignment: assignmentForRule(violation.id),
@@ -509,52 +590,6 @@ function domFindings(audit: ViewportAudit): Finding[] {
       assignment: 'QA',
       effort: 'Review',
       translationRequired: 'No'
-    }));
-  }
-
-  if (audit.dom.mainCount === 0) {
-    findings.push(makeFinding({
-      identity: 'main-landmark|page',
-      ruleId: 'missing-main-landmark',
-      classification: 'confirmed',
-      severity: 'Serious',
-      wcag: ['1.3.1', '2.4.1'],
-      summary: 'The page has no main landmark',
-      issue: 'No main element or role="main" was present.',
-      impact: 'Screen-reader users cannot move directly to the primary page content using landmark navigation.',
-      testing: 'The rendered DOM was queried for main and role="main" landmarks.',
-      remediation: 'Wrap the unique primary content in one semantic main element. Do not place repeated site chrome inside it.',
-      component: 'page structure',
-      urls: [audit.url],
-      viewports: [audit.viewport.name],
-      selectors: [],
-      evidence: [evidence('dom', undefined, 'main landmark count: 0')],
-      assignment: 'Development',
-      effort: 'Small',
-      translationRequired: 'No'
-    }));
-  }
-
-  if (audit.dom.h1Count !== 1) {
-    findings.push(makeFinding({
-      identity: 'heading-one|page',
-      ruleId: 'heading-one-review',
-      classification: 'review',
-      severity: 'Moderate',
-      wcag: ['1.3.1', '2.4.6'],
-      summary: 'Review the page-level heading structure',
-      issue: `The page contains ${audit.dom.h1Count} h1 elements. Automated counting cannot determine whether the hierarchy describes the content accurately.`,
-      impact: 'An unclear heading hierarchy can make content difficult to understand and navigate.',
-      testing: 'The rendered h1 elements were counted; heading meaning and hierarchy require content review.',
-      remediation: 'Provide a descriptive page-level heading and arrange subsequent headings in a logical hierarchy that reflects the page content.',
-      component: 'page headings',
-      urls: [audit.url],
-      viewports: [audit.viewport.name],
-      selectors: ['h1'],
-      evidence: [evidence('dom', 'h1', `h1 count: ${audit.dom.h1Count}`)],
-      assignment: 'Content',
-      effort: 'Small',
-      translationRequired: 'Review'
     }));
   }
 
@@ -668,8 +703,14 @@ function domFindings(audit: ViewportAudit): Finding[] {
       .filter((violation) => axeEmptyControlRules.has(violation.id))
       .flatMap((violation) => violation.nodes.map((node) => openingTagSignature(node.html)))
   );
+  const unlabeledFieldSelectors = new Set(audit.dom.unlabeledFields.map((item) => normalizeComponent(item.selector)));
+  const unlabeledFieldSignatures = new Set(audit.dom.unlabeledFields.map((item) => openingTagSignature(item.html)));
   for (const item of audit.dom.emptyNamedControls) {
     if (axeEmptyControlSignatures.has(openingTagSignature(item.html))) continue;
+    if (
+      unlabeledFieldSelectors.has(normalizeComponent(item.selector))
+      || unlabeledFieldSignatures.has(openingTagSignature(item.html))
+    ) continue;
     findings.push(makeFinding({
       identity: `empty-name|${normalizeComponent(item.selector)}`,
       ruleId: 'interactive-control-no-name',
@@ -797,26 +838,144 @@ function domFindings(audit: ViewportAudit): Finding[] {
     }));
   }
 
-  if (audit.responsive.textSpacingOverflow > Math.max(2, audit.responsive.horizontalOverflow + 2)) {
+  // Aggregate overflow during a stress phase is diagnostic evidence, not a WCAG
+  // failure: horizontal scrolling can be valid and a descendant can intentionally
+  // extend beyond a carousel or other two-dimensional region. Report default
+  // reflow clipping here; stress phases require a repeat-confirmed loss below.
+  for (const clipped of audit.responsive.clippedElements.filter((item) => item.phase === 'default')) {
+    const clippingConfirmed = clipped.repeatConfirmed === true && Boolean(clipped.contentSelector);
     findings.push(makeFinding({
-      identity: 'text-spacing|page',
-      ruleId: 'text-spacing-overflow',
-      classification: 'review',
+      identity: `responsive-clipped|${clipped.phase}|${normalizeComponent(clipped.selector)}`,
+      ruleId: 'responsive-content-clipped',
+      classification: clippingConfirmed ? 'confirmed' : 'review',
       severity: 'Moderate',
-      wcag: ['1.4.12'],
-      summary: 'Text-spacing overrides may cause content loss or overflow',
-      issue: `After applying WCAG text-spacing values, overflow increased to ${audit.responsive.textSpacingOverflow}px. Visual inspection is required to confirm clipping or overlap.`,
-      impact: 'People who increase spacing to read more comfortably may lose content or functionality.',
-      testing: 'WCAG text-spacing overrides were injected and page overflow was remeasured.',
-      remediation: 'Remove fixed heights and widths around text, allow wrapping, and test line, paragraph, letter, and word spacing together without clipping, overlap, or lost controls.',
-      component: 'page layout',
+      wcag: ['1.4.10'],
+      summary: `Content ${clippingConfirmed ? 'is' : 'may be'} clipped at the narrow viewport`,
+      issue: clippingConfirmed
+        ? `${clipped.contentSelector} (${clipped.contentKind ?? 'meaningful content'}) crossed the ${clipped.axis} clipping boundary of ${clipped.selector} in two settled samples.`
+        : `${clipped.selector} has ${clipped.axis} scroll dimensions larger than its visible box while its overflow styling can clip content.`,
+      impact: 'Users who zoom, reflow content, or increase text spacing may be unable to perceive content or reach functionality.',
+      testing: `At the ${clipped.phase} phase, the element measured ${clipped.clientWidth}×${clipped.clientHeight} CSS pixels with scroll dimensions ${clipped.scrollWidth}×${clipped.scrollHeight}.${clippingConfirmed ? ' A repeat sample reproduced the same clipped content and boundary.' : ''}`,
+      remediation: 'Allow content to wrap and containers to grow. If clipping is intentional, verify that no meaningful content or operable control is hidden at 320 CSS pixels and with WCAG text spacing.',
+      component: normalizeComponent(clipped.selector),
       urls: [audit.url],
       viewports: [audit.viewport.name],
-      selectors: [],
-      evidence: [evidence('responsive', undefined, `Text-spacing overflow: ${audit.responsive.textSpacingOverflow}px`)],
+      selectors: [clipped.selector],
+      evidence: [evidence('responsive', clipped.selector, JSON.stringify(clipped))],
       assignment: 'Development',
       effort: 'Medium',
-      translationRequired: 'No'
+      translationRequired: clippingConfirmed ? 'No' : 'Review'
+    }));
+  }
+
+  const overlapGroups = new Map<string, typeof audit.responsive.overlapPairs>();
+  for (const overlap of audit.responsive.overlapPairs) {
+    const legacyPair = [overlap.firstSelector, overlap.secondSelector].map(normalizeComponent).sort().join('|');
+    const affectedControl = overlap.obscuredSelector
+      ? normalizeComponent(overlap.obscuredSelector)
+      : legacyPair;
+    const groupKey = `${overlap.phase}|${affectedControl}`;
+    const group = overlapGroups.get(groupKey) ?? [];
+    group.push(overlap);
+    overlapGroups.set(groupKey, group);
+  }
+
+  for (const overlaps of overlapGroups.values()) {
+    const overlap = overlaps.reduce((largest, candidate) =>
+      (candidate.obscuredElementOverlapPercent ?? candidate.smallerElementOverlapPercent ?? candidate.overlapArea ?? 0)
+        > (largest.obscuredElementOverlapPercent ?? largest.smallerElementOverlapPercent ?? largest.overlapArea ?? 0)
+        ? candidate
+        : largest
+    );
+    const selectors = [...new Set(overlaps.flatMap((item) => [item.firstSelector, item.secondSelector]))];
+    const obscuredSelector = overlap.obscuredSelector;
+    const occludingSelectors = [...new Set(overlaps.map((item) => item.occludingSelector).filter((selector): selector is string => Boolean(selector)))];
+    const criteria = overlap.phase === 'text-spacing'
+      ? ['1.4.10', '1.4.12']
+      : overlap.phase === 'text-resize-200' ? ['1.4.4', '1.4.10'] : ['1.4.10'];
+    const phaseLabel = overlap.phase === 'text-spacing'
+      ? ' after text spacing'
+      : overlap.phase === 'text-resize-200' ? ' after 200% text resize' : ' at the narrow viewport';
+    findings.push(makeFinding({
+      identity: `responsive-overlap|${overlap.phase}|${obscuredSelector ? normalizeComponent(obscuredSelector) : selectors.map(normalizeComponent).sort().join('|')}`,
+      ruleId: 'responsive-controls-overlap',
+      classification: 'review',
+      severity: 'Moderate',
+      wcag: criteria,
+      summary: `Interactive control may be obscured${phaseLabel}`,
+      issue: obscuredSelector
+        ? `${obscuredSelector} was underneath ${occludingSelectors.length === 1 ? occludingSelectors[0] : `${occludingSelectors.length} other controls`} at every sampled point in an overlap covering up to ${Math.round(overlap.obscuredElementOverlapPercent ?? overlap.smallerElementOverlapPercent ?? 0)}% of the obscured control. Human review must confirm whether this prevents perception, activation, or visible focus.`
+        : `${overlaps.length === 1 ? 'Two visible interactive elements overlap' : `${overlaps.length} related interactive-element overlaps were detected`} by up to ${overlap.overlapWidth}×${overlap.overlapHeight} CSS pixels. Review whether a control, label, or focus indicator is obscured.`,
+      impact: 'Overlapping controls can hide information, make a target difficult to activate, or obscure keyboard focus.',
+      testing: obscuredSelector
+        ? `Rendered intersections and browser hit-test stacking were sampled during the ${overlap.phase} reflow phase at ${audit.viewport.width} CSS pixels. The candidate was retained only because one control was consistently above the other at at least three sample points.`
+        : `Rendered bounds were compared during the ${overlap.phase} reflow phase at ${audit.viewport.width} CSS pixels.`,
+      remediation: 'Use responsive layout and wrapping so controls do not cover one another at narrow widths or after text spacing is increased.',
+      component: normalizeComponent(obscuredSelector ?? overlap.firstSelector),
+      urls: [audit.url],
+      viewports: [audit.viewport.name],
+      selectors,
+      evidence: overlaps.map((item) => evidence('responsive', item.obscuredSelector ?? item.firstSelector, JSON.stringify(item))),
+      assignment: 'Development',
+      effort: 'Medium',
+      translationRequired: 'Review'
+    }));
+  }
+
+  if (audit.responsive.lostInteractiveElements.length > 0) {
+    const lossConfirmed = audit.responsive.lostInteractiveElements.every((item) => item.repeatConfirmed === true);
+    const selectors = audit.responsive.lostInteractiveElements.map((item) => item.selector);
+    const normalizedSelectors = [...new Set(selectors.map(normalizeComponent))].sort();
+    const component = normalizedSelectors.length === 1 ? normalizedSelectors[0]! : 'responsive layout';
+    findings.push(makeFinding({
+      identity: `text-spacing-lost-functionality|${normalizedSelectors.join('|')}`,
+      ruleId: 'text-spacing-functionality-lost',
+      classification: lossConfirmed ? 'confirmed' : 'review',
+      severity: 'Serious',
+      wcag: ['1.4.12'],
+      summary: `Interactive content ${lossConfirmed ? 'disappears' : 'may disappear'} after text spacing is increased`,
+      issue: `${audit.responsive.lostInteractiveElements.length} control(s) that were visible before the WCAG text-spacing override were no longer visibly rendered afterwards.`,
+      impact: 'People who increase text spacing may lose access to controls or functionality.',
+      testing: `Visible interactive elements were inventoried before and after applying the WCAG text-spacing values, then compared by stable selector.${lossConfirmed ? ' The loss was reproduced in two settled stress samples from a stable two-sample baseline.' : ''}`,
+      remediation: 'Remove fixed-height clipping and layout constraints so controls remain visible, readable, and operable with increased line, paragraph, word, and letter spacing.',
+      component,
+      sharedComponentKey: createSharedComponentKey(component, `text-spacing-functionality-lost|${normalizedSelectors.join('|')}`),
+      urls: [audit.url],
+      viewports: [audit.viewport.name],
+      selectors,
+      evidence: audit.responsive.lostInteractiveElements.map((item) => evidence('responsive', item.selector, `Previously visible control disappeared: ${item.name || 'unnamed control'}.`)),
+      assignment: 'Development',
+      effort: 'Medium',
+      translationRequired: lossConfirmed ? 'No' : 'Review'
+    }));
+  }
+
+  if ((audit.responsive.textResizeLostInteractiveElements?.length ?? 0) > 0) {
+    const lost = audit.responsive.textResizeLostInteractiveElements ?? [];
+    const lossConfirmed = lost.every((item) => item.repeatConfirmed === true);
+    const selectors = lost.map((item) => item.selector);
+    const normalizedSelectors = [...new Set(selectors.map(normalizeComponent))].sort();
+    const component = normalizedSelectors.length === 1 ? normalizedSelectors[0]! : 'responsive layout';
+    findings.push(makeFinding({
+      identity: `text-resize-lost-functionality|${normalizedSelectors.join('|')}`,
+      ruleId: 'text-resize-functionality-lost',
+      classification: lossConfirmed ? 'confirmed' : 'review',
+      severity: 'Serious',
+      wcag: ['1.4.4', '1.4.10'],
+      summary: `Interactive content ${lossConfirmed ? 'disappears' : 'may disappear'} after text is resized to 200%`,
+      issue: `${lost.length} control(s) visible before the 200% text resize were no longer visibly rendered afterwards.`,
+      impact: 'People who enlarge text may lose access to controls or functionality.',
+      testing: `Visible interactive elements were inventoried before and after the 200% root text-size override, then compared by stable selector.${lossConfirmed ? ' The loss was reproduced in two settled stress samples from a stable two-sample baseline.' : ''}`,
+      remediation: 'Use relative sizing and flexible layouts so every control remains visible and operable when text is enlarged to 200%.',
+      component,
+      sharedComponentKey: createSharedComponentKey(component, `text-resize-functionality-lost|${normalizedSelectors.join('|')}`),
+      urls: [audit.url],
+      viewports: [audit.viewport.name],
+      selectors,
+      evidence: lost.map((item) => evidence('responsive', item.selector, `Previously visible control disappeared: ${item.name || 'unnamed control'}.`)),
+      assignment: 'Development',
+      effort: 'Medium',
+      translationRequired: lossConfirmed ? 'No' : 'Review'
     }));
   }
 
@@ -851,6 +1010,70 @@ function domFindings(audit: ViewportAudit): Finding[] {
       assignment: 'Development',
       effort: 'Medium',
       translationRequired: 'No'
+    }));
+  }
+
+  const outsideViewport = audit.keyboard.sequence.filter((item) => item.outsideViewport);
+  for (const [component, items] of groupKeyboardItems(outsideViewport)) {
+    const focusLossConfirmed = items.every((item) => item.outsideViewportConfirmed === true);
+    findings.push(makeFinding({
+      identity: `focus-outside-viewport|${component}`,
+      ruleId: 'keyboard-focus-outside-viewport',
+      classification: focusLossConfirmed ? 'confirmed' : 'review',
+      severity: 'Serious',
+      wcag: ['2.4.11'],
+      summary: `Keyboard focus ${focusLossConfirmed ? 'moves' : 'may move'} outside the visible viewport`,
+      issue: `Sequential focus reached ${items.length} element(s) whose rendered bounds were outside the visible viewport after focus settled.`,
+      impact: 'Keyboard users may lose track of focus and be unable to identify the currently active control.',
+      testing: `The deterministic keyboard traversal checked focused-element bounds after each Tab step; affected positions: ${items.map((item) => item.index).join(', ')}.${focusLossConfirmed ? ' Each affected focus target remained outside the viewport in a second settled sample.' : ''}`,
+      remediation: 'Scroll focused controls into view, remove hidden elements from the focus order, and ensure overlays do not separate visual and programmatic focus.',
+      component,
+      urls: [audit.url],
+      viewports: [audit.viewport.name],
+      selectors: items.map((item) => item.selector),
+      evidence: items.map((item) => evidence('keyboard', item.selector, `Focus position ${item.index} was outside the viewport.`)),
+      assignment: 'Development',
+      effort: 'Medium',
+      translationRequired: 'No'
+    }));
+  }
+
+  for (const journey of audit.keyboard.journeys.filter((item) => item.status === 'failed')) {
+    const isBypass = journey.id === 'bypass-blocks';
+    const configured = journey.source === 'configured';
+    const configuredCriteria = [
+      ...(journey.categories?.includes('keyboard') ? ['2.1.1', '2.4.3'] : []),
+      ...(journey.categories?.includes('forms') ? ['3.3.1', '3.3.2'] : []),
+      ...(journey.categories?.includes('interaction') ? ['4.1.2'] : []),
+      ...(journey.categories?.includes('dynamic-content') ? ['4.1.3'] : [])
+    ].filter((criterion, index, all) => all.indexOf(criterion) === index);
+    findings.push(makeFinding({
+      identity: `keyboard-journey|${journey.id}|${audit.url}`,
+      ruleId: `keyboard-journey-${journey.id}`,
+      classification: 'review',
+      severity: 'Serious',
+      wcag: configured ? (configuredCriteria.length ? configuredCriteria : ['2.1.1']) : [isBypass ? '2.4.1' : '2.4.3'],
+      summary: `${journey.title} did not produce the expected result`,
+      issue: journey.detail,
+      impact: configured
+        ? 'Users may be unable to complete the configured task or receive its expected state, validation, or status feedback.'
+        : isBypass
+        ? 'Keyboard users may be forced to traverse repeated content before reaching the main page content.'
+        : 'Keyboard users may encounter an unexpected or illogical focus sequence.',
+      testing: `Executed deterministic journey: ${journey.steps.join(' → ') || 'no completed steps'}.`,
+      remediation: configured
+        ? 'Repair the failed state transition or assertion, then rerun this journey and manually verify the equivalent task with keyboard and assistive technology.'
+        : isBypass
+        ? 'Provide an operable bypass mechanism whose target exists, becomes visible, and receives or immediately precedes focus.'
+        : 'Keep DOM and visual order aligned and ensure forward and reverse sequential navigation are predictable.',
+      component: configured ? 'configured user journey' : 'page keyboard journey',
+      urls: [audit.url],
+      viewports: [audit.viewport.name],
+      selectors: journey.selectors ?? [],
+      evidence: [evidence('keyboard', undefined, JSON.stringify(journey))],
+      assignment: 'Development',
+      effort: 'Medium',
+      translationRequired: 'Review'
     }));
   }
 
@@ -999,7 +1222,11 @@ function domFindings(audit: ViewportAudit): Finding[] {
       }));
     }
 
-    const focusOrderReviews = completed.filter((item) => item.tabEnteredControlledRegion === false);
+    const focusOrderReviews = completed.filter((item) => (
+      item.controlledFocusableCount !== undefined
+      && item.controlledFocusableCount > 0
+      && item.tabEnteredControlledRegion === false
+    ));
     if (focusOrderReviews.length) {
       findings.push(makeFinding({
         identity: `disclosure-focus-order|${component}`,
@@ -1037,23 +1264,7 @@ function domFindings(audit: ViewportAudit): Finding[] {
       effort: 'Medium' as const,
       translationRequired: 'No' as const
     };
-    if (tab.error) {
-      findings.push(makeFinding({
-        ...common,
-        identity: `tabs-test-error|${component}`,
-        ruleId: 'tabs-test-incomplete',
-        classification: 'review',
-        severity: 'Moderate',
-        wcag: ['Best Practice'],
-        summary: 'Tab interaction test did not complete',
-        issue: tab.error,
-        impact: 'The automated result cannot establish whether the tab interaction works correctly.',
-        testing: 'The rendered tablist was exercised in an isolated browser, but the interaction raised an error.',
-        remediation: 'Stabilize the tab interaction and rerun the keyboard and relationship checks before deciding conformance.',
-        evidence: [evidence('keyboard', tab.selector, JSON.stringify(tab))]
-      }));
-      continue;
-    }
+    if (tab.error) continue;
     if (!tab.navigationMovedToTab) {
       const otherTabsKeyboardUnreachable = tab.tabbableCount <= 1;
       findings.push(makeFinding({
@@ -1125,17 +1336,20 @@ function domFindings(audit: ViewportAudit): Finding[] {
   }
 
   for (const table of audit.dom.tablesForReview) {
+    const tableConfirmed = table.classification === 'confirmed';
     findings.push(makeFinding({
       identity: `table-semantics|${normalizeComponent(table.selector)}`,
-      ruleId: 'table-semantics-review',
-      classification: 'review',
+      ruleId: tableConfirmed ? 'table-missing-headers' : 'table-semantics-review',
+      classification: tableConfirmed ? 'confirmed' : 'review',
       severity: 'Moderate',
       wcag: ['1.3.1'],
-      summary: 'Review table headers and name',
+      summary: tableConfirmed ? 'Data table has no header cells' : 'Review table semantics',
       issue: table.reason,
       impact: 'Screen-reader users may not understand the table purpose or the relationship between headers and data cells.',
-      testing: 'Rendered table markup was checked for header cells and a programmatic name.',
-      remediation: 'Use tables only for data, provide descriptive header cells with correct scope or headers relationships, and add a caption or other programmatic name when needed.',
+      testing: tableConfirmed
+        ? `Rendered table geometry and markup were checked. The table has ${table.rowCount ?? 'multiple'} rows and ${table.columnCount ?? 'multiple'} columns but no th elements.`
+        : 'Rendered table markup was checked for data-table header relationships.',
+      remediation: 'Use tables only for data and provide descriptive header cells with correct scope or headers relationships.',
       component: normalizeComponent(table.selector),
       sharedComponentKey: createSharedComponentKey(normalizeComponent(table.selector), table.reason),
       urls: [audit.url],
@@ -1144,7 +1358,7 @@ function domFindings(audit: ViewportAudit): Finding[] {
       evidence: [evidence('dom', table.selector, table.reason)],
       assignment: 'Development',
       effort: 'Medium',
-      translationRequired: 'Review'
+      translationRequired: tableConfirmed ? 'No' : 'Review'
     }));
   }
 
@@ -1177,5 +1391,20 @@ function domFindings(audit: ViewportAudit): Finding[] {
 export function findingsFromPage(page: PageAudit): Finding[] {
   return page.viewports
     .filter((audit) => !audit.cancelled)
-    .flatMap((audit) => [...axeFindings(audit), ...domFindings(audit)].map((finding) => enrichComponent(finding, audit)));
+    .flatMap((audit) => {
+      const outcome = (checkId: AuditCheckId) => audit.collectionOutcomes?.find((item) => item.checkId === checkId);
+      const retainsEvidence = (finding: Finding): boolean => finding.evidence.every((item) => {
+        const checkId = item.provenance?.checkId;
+        if (audit.interactionBlocker && checkId === 'responsive' && finding.classification !== 'blocker') {
+          return false;
+        }
+        if (!checkId || !audit.collectionOutcomes) return true;
+        const status = outcome(checkId)?.status;
+        return status === 'completed'
+          || (finding.classification === 'blocker' && (status === 'failed' || status === 'blocked'));
+      });
+      return [...axeFindings(audit), ...domFindings(audit)]
+        .filter(retainsEvidence)
+        .map((finding) => enrichComponent(finding, audit));
+    });
 }

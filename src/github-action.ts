@@ -1,7 +1,9 @@
 import { appendFile, readFile } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
-import type { AuditProgressEvent, Finding, Severity } from './types.js';
+import { resolveOptions, type AuditConfigInput } from './config.js';
+import type { AuditJourneyDefinition, AuditProgressEvent, Finding, Severity } from './types.js';
 import { executeAudit, type AuditRunResult } from './service.js';
+import { splitUrlListValue } from './urls.js';
 
 export const FAILURE_POLICIES = ['none', 'blockers', 'confirmed', 'critical', 'serious', 'moderate', 'minor'] as const;
 export type FailurePolicy = (typeof FAILURE_POLICIES)[number];
@@ -45,10 +47,29 @@ export function parseListInput(value: string, allowCommas = false): string[] {
     if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== 'string')) {
       throw new Error('List inputs using JSON must contain only strings.');
     }
-    return parsed.map((item) => item.trim()).filter(Boolean);
+    return parsed.flatMap((item) => splitUrlListValue(item));
   }
   const separator = allowCommas ? /[\r\n,]+/ : /[\r\n]+/;
-  return trimmed.split(separator).map((item) => item.trim()).filter(Boolean);
+  return trimmed.split(separator).flatMap((item) => splitUrlListValue(item));
+}
+
+export function resolveAllowedHosts(inputs: string[], configuredHosts: string[]): string[] {
+  if (configuredHosts.length > 0) return configuredHosts;
+
+  const hosts = inputs.map((input) => {
+    let parsed: URL;
+    try {
+      parsed = new URL(input);
+    } catch {
+      throw new Error('The GitHub Action urls input accepts explicit HTTP(S) URLs only.');
+    }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+      throw new Error('The GitHub Action urls input accepts explicit HTTP(S) URLs without embedded credentials only.');
+    }
+    return parsed.hostname.toLowerCase().replace(/\.+$/, '');
+  });
+
+  return [...new Set(hosts)];
 }
 
 export function parseBooleanInput(value: string, fallback: boolean): boolean {
@@ -74,11 +95,26 @@ export function parseWcagLevel(value: string): 'AA' | 'AAA' {
   return normalized;
 }
 
-function parsePositiveInteger(value: string, fallback: number, name: string): number {
+export function parsePositiveInteger(value: string, fallback: number, name: string, maximum?: number): number {
   if (!value.trim()) return fallback;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1) throw new Error(`${name} must be a positive integer.`);
+  if (maximum !== undefined && parsed > maximum) throw new Error(`${name} must be between 1 and ${maximum}.`);
   return parsed;
+}
+
+export function parseJourneysInput(value: string): AuditJourneyDefinition[] {
+  if (!value.trim()) return [];
+  const parsed: unknown = JSON.parse(value);
+  const journeys = Array.isArray(parsed)
+    ? parsed
+    : parsed && typeof parsed === 'object' && 'journeys' in parsed
+      ? (parsed as { journeys: unknown }).journeys
+      : undefined;
+  if (!Array.isArray(journeys)) {
+    throw new Error('journeys must be a JSON array or an object containing a journeys array.');
+  }
+  return resolveOptions({ journeys: journeys as AuditConfigInput['journeys'] }).journeys;
 }
 
 export function evaluateGate(policy: FailurePolicy, findings: StoredAuditSummary['findings'] = []): GateEvaluation {
@@ -114,6 +150,21 @@ function resolveOutputDirectory(environment: ActionEnvironment, value: string): 
   const requested = value || 'accessibility-audit-results';
   if (isAbsolute(requested)) return resolve(requested);
   return resolve(environment.GITHUB_WORKSPACE || process.cwd(), requested);
+}
+
+async function loadActionJourneys(environment: ActionEnvironment): Promise<AuditJourneyDefinition[]> {
+  const inline = getInput(environment, 'JOURNEYS');
+  const file = getInput(environment, 'JOURNEYS-FILE');
+  if (inline && file) throw new Error('Use either journeys or journeys-file, not both.');
+  if (inline) return parseJourneysInput(inline);
+  if (!file) return [];
+  const path = isAbsolute(file) ? file : resolve(environment.GITHUB_WORKSPACE || process.cwd(), file);
+  try {
+    return parseJourneysInput(await readFile(path, 'utf8'));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not load journeys-file ${file}: ${message}`);
+  }
 }
 
 async function setOutput(environment: ActionEnvironment, name: string, value: string | number): Promise<void> {
@@ -226,13 +277,17 @@ async function readStoredFindings(jsonPath: string): Promise<StoredAuditSummary[
   return stored.findings ?? [];
 }
 
-export async function runGitHubAction(environment: ActionEnvironment = process.env): Promise<AuditRunResult> {
+export async function runGitHubAction(
+  environment: ActionEnvironment = process.env,
+  signal?: AbortSignal
+): Promise<AuditRunResult> {
   const inputs = parseListInput(getInput(environment, 'URLS'));
   if (!inputs.length) throw new Error('The urls input must include at least one URL, with one URL per line.');
 
   const outputDir = resolveOutputDirectory(environment, getInput(environment, 'OUTPUT-DIR'));
-  const allowedHosts = parseListInput(getInput(environment, 'ALLOWED-HOSTS'), true);
+  const allowedHosts = resolveAllowedHosts(inputs, parseListInput(getInput(environment, 'ALLOWED-HOSTS'), true));
   const failurePolicy = parseFailurePolicy(getInput(environment, 'FAIL-ON'));
+  const journeys = await loadActionJourneys(environment);
   const templatePath = environment.GITHUB_ACTION_PATH
     ? resolve(environment.GITHUB_ACTION_PATH, 'assets', 'accessibility-report-template.xlsx')
     : undefined;
@@ -242,6 +297,7 @@ export async function runGitHubAction(environment: ActionEnvironment = process.e
     options: {
       auditor: getInput(environment, 'AUDITOR') || 'GitHub Actions',
       wcagLevel: parseWcagLevel(getInput(environment, 'WCAG-LEVEL')),
+      aaaAdvisory: parseBooleanInput(getInput(environment, 'AAA-ADVISORY'), false),
       outputDir,
       ...(getInput(environment, 'LANDING-PAGE-URL') ? { landingPageUrl: getInput(environment, 'LANDING-PAGE-URL') } : {}),
       allowedHosts,
@@ -249,12 +305,14 @@ export async function runGitHubAction(environment: ActionEnvironment = process.e
       headless: true,
       autoInstallBrowser: parseBooleanInput(getInput(environment, 'AUTO-INSTALL-BROWSER'), true),
       timeoutMs: parsePositiveInteger(getInput(environment, 'TIMEOUT-MS'), 30_000, 'timeout-ms'),
-      concurrency: parsePositiveInteger(getInput(environment, 'CONCURRENCY'), 2, 'concurrency'),
+      concurrency: parsePositiveInteger(getInput(environment, 'CONCURRENCY'), 2, 'concurrency', 8),
       captureScreenshots: parseBooleanInput(getInput(environment, 'CAPTURE-SCREENSHOTS'), true),
+      journeys,
       ...(getInput(environment, 'BROWSER-CHANNEL') ? { channel: getInput(environment, 'BROWSER-CHANNEL') } : {}),
       ...(templatePath ? { templatePath } : {})
     },
     execution: {
+      ...(signal ? { signal } : {}),
       onProgress: (event) => { process.stdout.write(`${formatProgress(event)}\n`); }
     }
   });

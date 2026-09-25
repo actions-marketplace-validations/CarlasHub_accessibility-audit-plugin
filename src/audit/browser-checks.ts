@@ -40,7 +40,7 @@ export async function runDomChecks(page: Page, axeTargetSizeSelectors: string[] 
         current = current.parentElement;
       }
       if (rect.top < innerHeight && rect.bottom > 0) {
-        const samplePoints = [
+        const samplePoints: Array<[number, number]> = [
           [Math.max(0, Math.min(innerWidth - 1, rect.left + rect.width / 2)), Math.max(0, Math.min(innerHeight - 1, rect.top + rect.height / 2))],
           [Math.max(0, Math.min(innerWidth - 1, rect.left + 2)), Math.max(0, Math.min(innerHeight - 1, rect.top + 2))]
         ];
@@ -69,18 +69,52 @@ export async function runDomChecks(page: Page, axeTargetSizeSelectors: string[] 
       }
       return parts.join(' > ');
     };
+    const hiddenFromAccessibleName = (element: Element): string => {
+      if (element.getAttribute('aria-hidden')?.toLowerCase() === 'true') return 'aria-hidden="true"';
+      const style = getComputedStyle(element);
+      if (style.display === 'none') return 'display:none';
+      if (style.visibility === 'hidden') return 'visibility:hidden';
+      if (style.visibility === 'collapse') return 'visibility:collapse';
+      return '';
+    };
     const descendantTextAlternative = (node: Node): string => {
       if (node instanceof Text) return node.textContent?.trim() ?? '';
-      if (!(node instanceof Element) || node.getAttribute('aria-hidden') === 'true') return '';
+      if (!(node instanceof Element) || hiddenFromAccessibleName(node)) return '';
       if (node instanceof HTMLImageElement) return node.alt.trim();
       if (node instanceof HTMLInputElement && node.type === 'image') return node.alt.trim();
       return [...node.childNodes].map(descendantTextAlternative).filter(Boolean).join(' ').trim();
     };
     const descendantTextWithoutImages = (node: Node): string => {
       if (node instanceof Text) return node.textContent?.trim() ?? '';
-      if (!(node instanceof Element) || node.getAttribute('aria-hidden') === 'true') return '';
+      if (!(node instanceof Element) || hiddenFromAccessibleName(node)) return '';
       if (node instanceof HTMLImageElement || (node instanceof HTMLInputElement && node.type === 'image')) return '';
       return [...node.childNodes].map(descendantTextWithoutImages).filter(Boolean).join(' ').trim();
+    };
+    const excludedNameSources = (element: Element): Array<{ selector: string; text: string; reason: string }> => {
+      const sources: Array<{ selector: string; text: string; reason: string }> = [];
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node) {
+        const text = node.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+        if (text) {
+          let current = node.parentElement;
+          let reason = '';
+          while (current && element.contains(current)) {
+            reason = hiddenFromAccessibleName(current);
+            if (reason) break;
+            if (current === element) break;
+            current = current.parentElement;
+          }
+          if (reason && current) {
+            const source = { selector: cssPath(current), text, reason };
+            if (!sources.some((item) => item.selector === source.selector && item.text === source.text && item.reason === source.reason)) {
+              sources.push(source);
+            }
+          }
+        }
+        node = walker.nextNode();
+      }
+      return sources;
     };
     const name = (element: Element): string => {
       const labelledBy = element.getAttribute('aria-labelledby');
@@ -151,7 +185,9 @@ export async function runDomChecks(page: Page, axeTargetSizeSelectors: string[] 
       .map((link) => ({
         selector: cssPath(link),
         html: link.outerHTML.slice(0, 500),
-        href: link.getAttribute('href') ?? ''
+        href: link.getAttribute('href') ?? '',
+        sourceText: link.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+        excludedNameSources: excludedNameSources(link)
       }));
     const emptyNamedControls = [...document.querySelectorAll(focusables)]
       .filter(visible)
@@ -256,12 +292,17 @@ export async function runDomChecks(page: Page, axeTargetSizeSelectors: string[] 
     const tablesForReview = [...document.querySelectorAll('table')]
       .filter(visible)
       .flatMap((table) => {
-        const reasons: string[] = [];
-        if (!table.querySelector('th')) reasons.push('No header cells were found.');
-        if (!table.querySelector('caption') && !table.getAttribute('aria-label') && !table.getAttribute('aria-labelledby')) {
-          reasons.push('No programmatic table name was found.');
-        }
-        return reasons.length ? [{ selector: cssPath(table), reason: reasons.join(' ') }] : [];
+        if (/^(presentation|none)$/i.test(table.getAttribute('role') ?? '')) return [];
+        const rows = [...table.rows].filter((row) => row.closest('table') === table);
+        const columnCount = Math.max(0, ...rows.map((row) => row.cells.length));
+        if (table.querySelector('th') || rows.length < 2 || columnCount < 2) return [];
+        return [{
+          selector: cssPath(table),
+          reason: `A visible ${rows.length}-row by ${columnCount}-column data table has no header cells.`,
+          classification: 'confirmed' as const,
+          rowCount: rows.length,
+          columnCount
+        }];
       });
     const autoplayMedia = [...document.querySelectorAll('audio[autoplay], video[autoplay]')]
       .filter(visible)
@@ -339,17 +380,9 @@ export async function runLinkChecks(page: Page, maxLinks: number): Promise<{ res
   for (const candidate of candidates.links) {
     const rawHref = candidate.rawHref.trim();
     if (!candidate.name || candidate.download || /^(mailto|tel|sms|data|blob):/i.test(rawHref)) continue;
-    if (!rawHref || rawHref === '#') {
-      results.push({
-        selector: candidate.selector,
-        name: candidate.name,
-        href: rawHref,
-        status: null,
-        classification: 'review',
-        reason: 'The link uses an empty or placeholder destination. Confirm whether it should be a button or point to a real resource.'
-      });
-      continue;
-    }
+    // An empty fragment is commonly used as a script-backed control. The URL
+    // alone cannot prove a WCAG failure, so leave it to the interaction checks.
+    if (!rawHref || rawHref === '#') continue;
     if (/^javascript:/i.test(rawHref)) {
       results.push({
         selector: candidate.selector,
@@ -458,6 +491,17 @@ export async function runLinkChecks(page: Page, maxLinks: number): Promise<{ res
 }
 
 export async function runKeyboardChecks(page: Page, maxTabStops: number): Promise<KeyboardCheckResult> {
+  const focusIdentityAttribute = 'data-a11y-audit-focus-id';
+  // Smooth scrolling can still be mid-animation when a focus position is
+  // sampled, which creates an audit-timing false positive. Normalising only
+  // scroll animation preserves the browser's actual focus order and final
+  // scroll destination while making the measurement deterministic.
+  const scrollBehaviorStyle = await page.addStyleTag({
+    content: 'html, body, * { scroll-behavior: auto !important; }'
+  });
+  await page.locator(`[${focusIdentityAttribute}]`).evaluateAll((elements, attribute) => {
+    for (const element of elements) element.removeAttribute(attribute);
+  }, focusIdentityAttribute);
   await page.evaluate(() => {
     const body = document.body;
     body.dataset.auditTemporaryTabindex = String(body.getAttribute('tabindex') ?? '');
@@ -467,12 +511,55 @@ export async function runKeyboardChecks(page: Page, maxTabStops: number): Promis
   const sequence: KeyboardCheckResult['sequence'] = [];
   let repeatedAt: number | undefined;
   const seen = new Set<string>();
+  const focusIdentities: string[] = [];
+
+  const waitForFocusedElementToSettle = async (): Promise<void> => {
+    await page.evaluate(async () => {
+      const element = document.activeElement as HTMLElement | null;
+      if (!element || element === document.body) return;
+      const intersectsViewport = (rect: DOMRect): boolean => (
+        rect.right > 0 && rect.bottom > 0 && rect.left < innerWidth && rect.top < innerHeight
+      );
+      let previous = element.getBoundingClientRect();
+      if (intersectsViewport(previous)) return;
+      const started = performance.now();
+      let stableFrames = 0;
+      await new Promise<void>((resolve) => {
+        const observe = (): void => {
+          const current = element.getBoundingClientRect();
+          if (intersectsViewport(current)) {
+            resolve();
+            return;
+          }
+          const moved = Math.abs(current.left - previous.left) > 0.5
+            || Math.abs(current.top - previous.top) > 0.5
+            || Math.abs(current.right - previous.right) > 0.5
+            || Math.abs(current.bottom - previous.bottom) > 0.5;
+          stableFrames = moved ? 0 : stableFrames + 1;
+          previous = current;
+          const elapsed = performance.now() - started;
+          if (elapsed >= 750 || (elapsed >= 350 && stableFrames >= 5)) {
+            resolve();
+            return;
+          }
+          requestAnimationFrame(observe);
+        };
+        requestAnimationFrame(observe);
+      });
+    });
+  };
 
   for (let index = 0; index < maxTabStops; index += 1) {
     await page.keyboard.press('Tab');
+    await waitForFocusedElementToSettle();
     const item = await page.evaluate((position) => {
       const element = document.activeElement as HTMLElement | null;
       if (!element || element === document.body) return null;
+      let focusIdentity = element.getAttribute('data-a11y-audit-focus-id');
+      if (!focusIdentity) {
+        focusIdentity = `focus-${position}`;
+        element.setAttribute('data-a11y-audit-focus-id', focusIdentity);
+      }
       const cssPath = (target: Element): string => {
         if (target.id) return `#${CSS.escape(target.id)}`;
         const parts: string[] = [];
@@ -544,12 +631,10 @@ export async function runKeyboardChecks(page: Page, maxTabStops: number): Promis
       ];
       const focusedVisual = visualSignature(style);
       const focusVisible = element.matches(':focus-visible');
-      const scrollPosition = { x: scrollX, y: scrollY };
       element.blur();
       document.body.focus({ preventScroll: true });
       const unfocusedVisual = visualSignature(getComputedStyle(element));
-      element.focus({ preventScroll: true });
-      scrollTo(scrollPosition.x, scrollPosition.y);
+      element.focus();
       const visibleIndicator = focusVisible && focusedVisual.some((value, index) => value !== unfocusedVisual[index]);
       const modal = element.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"], #system-ialert');
       const pageChrome = element.closest('header, [role="banner"], footer, [role="contentinfo"]');
@@ -558,24 +643,145 @@ export async function runKeyboardChecks(page: Page, maxTabStops: number): Promis
         ?? element;
       return {
         index: position,
+        focusIdentity,
         selector: cssPath(element),
         name,
         role: element.getAttribute('role') ?? element.tagName.toLowerCase(),
         visibleIndicator,
         obscured,
+        outsideViewport: rect.right <= 0 || rect.bottom <= 0 || rect.left >= innerWidth || rect.top >= innerHeight,
         componentSelector: cssPath(componentRoot),
         ...(modal ? { modalSelector: cssPath(modal) } : {})
       };
     }, index + 1);
     if (!item) break;
-    const identity = `${item.selector}|${item.name}|${item.role}`;
-    if (seen.has(identity)) {
+    const outsideViewportConfirmed = item.outsideViewport
+      ? await page.waitForTimeout(120).then(() => page.evaluate(({ attribute, identity }) => {
+        const element = document.activeElement as HTMLElement | null;
+        if (!element || element.getAttribute(attribute) !== identity) return false;
+        const rect = element.getBoundingClientRect();
+        return rect.right <= 0 || rect.bottom <= 0 || rect.left >= innerWidth || rect.top >= innerHeight;
+      }, { attribute: focusIdentityAttribute, identity: item.focusIdentity }))
+      : false;
+    const { focusIdentity, ...sequenceItem } = item;
+    if (seen.has(focusIdentity)) {
       repeatedAt = index + 1;
       break;
     }
-    seen.add(identity);
-    sequence.push(item);
+    seen.add(focusIdentity);
+    focusIdentities.push(focusIdentity);
+    sequence.push({ ...sequenceItem, outsideViewportConfirmed });
   }
+
+  const journeys: KeyboardCheckResult['journeys'] = [];
+  if (sequence.length >= 2) {
+    const sampleSize = Math.min(sequence.length, 21);
+    const expected = focusIdentities.slice(0, sampleSize).reverse().slice(1);
+    const actual: string[] = [];
+    const lastSelector = sequence[sampleSize - 1]!.selector;
+    const lastFocusIdentity = focusIdentities[sampleSize - 1]!;
+    const focused = await page.locator(`[${focusIdentityAttribute}="${lastFocusIdentity}"]`).first().focus().then(() => true).catch(() => false);
+    if (focused) {
+      for (let index = 0; index < expected.length; index += 1) {
+        await page.keyboard.press('Shift+Tab');
+        actual.push(await page.evaluate(() => {
+          const target = document.activeElement;
+          if (!target || target === document.body) return 'document-body';
+          return target.getAttribute('data-a11y-audit-focus-id') ?? 'untracked-focus-target';
+        }));
+      }
+    }
+    const matches = focused && expected.every((selector, index) => actual[index] === selector);
+    const untracked = actual.includes('untracked-focus-target');
+    journeys.push({
+      id: 'forward-reverse-focus-order',
+      title: 'Forward and reverse focus order',
+      status: focused ? (untracked ? 'inconclusive' : matches ? 'passed' : 'failed') : 'inconclusive',
+      steps: [
+        `Recorded ${sequence.length} forward Tab stop${sequence.length === 1 ? '' : 's'}.`,
+        `Replayed ${actual.length} Shift+Tab stop${actual.length === 1 ? '' : 's'} from ${lastSelector}.`
+      ],
+      detail: focused
+        ? untracked
+          ? 'A reverse Tab stop was re-rendered after the forward sample, so deterministic comparison was not possible.'
+          : matches
+          ? 'The sampled reverse sequence matched the forward sequence in reverse order.'
+          : 'The sampled Shift+Tab sequence did not reverse the recorded Tab sequence; review focus management and dynamic page state.'
+        : 'The last sampled focus target could not be restored for deterministic reverse traversal.'
+    });
+  } else {
+    journeys.push({
+      id: 'forward-reverse-focus-order',
+      title: 'Forward and reverse focus order',
+      status: 'inconclusive',
+      steps: [`Recorded ${sequence.length} forward Tab stops.`],
+      detail: 'At least two stable focus targets are required to compare forward and reverse focus order.'
+    });
+  }
+
+  const bypass = await page.evaluate(() => {
+    const visible = (element: Element): boolean => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    };
+    const link = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')]
+      .find((candidate) => candidate.hash.length > 1 && visible(candidate));
+    if (!link) return null;
+    const id = decodeURIComponent(link.hash.slice(1));
+    const target = document.getElementById(id) ?? document.getElementsByName(id)[0] ?? null;
+    return {
+      linkSelector: link.id ? `#${CSS.escape(link.id)}` : `a[href="${CSS.escape(link.getAttribute('href') ?? '')}"]`,
+      name: (link.getAttribute('aria-label') ?? link.textContent ?? '').trim(),
+      targetId: id,
+      targetExists: Boolean(target)
+    };
+  });
+  if (!bypass) {
+    journeys.push({
+      id: 'bypass-blocks',
+      title: 'Bypass repeated blocks',
+      status: 'not-applicable',
+      steps: ['Searched the rendered page for a visible in-page fragment link.'],
+      detail: 'No visible in-page bypass link was found; a human must determine whether repeated content requires another bypass mechanism.'
+    });
+  } else if (!bypass.targetExists) {
+    journeys.push({
+      id: 'bypass-blocks',
+      title: 'Bypass repeated blocks',
+      status: 'failed',
+      steps: [`Found “${bypass.name || bypass.linkSelector}”.`, `Resolved fragment target #${bypass.targetId}.`],
+      detail: 'The visible in-page link points to a target that does not exist.'
+    });
+  } else {
+    const activated = await page.locator(bypass.linkSelector).first().focus().then(async () => {
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(50);
+      return page.evaluate((targetId) => {
+        const target = document.getElementById(targetId) ?? document.getElementsByName(targetId)[0] ?? null;
+        const active = document.activeElement;
+        if (!target) return false;
+        const rect = target.getBoundingClientRect();
+        const focusedTarget = active === target || target.contains(active);
+        const targetReached = location.hash === `#${targetId}` && rect.bottom > 0 && rect.top < innerHeight;
+        return focusedTarget || targetReached;
+      }, bypass.targetId);
+    }).catch(() => false);
+    journeys.push({
+      id: 'bypass-blocks',
+      title: 'Bypass repeated blocks',
+      status: activated ? 'passed' : 'failed',
+      steps: [`Focused “${bypass.name || bypass.linkSelector}”.`, 'Pressed Enter.', `Checked target #${bypass.targetId}.`],
+      detail: activated
+        ? 'The bypass link moved focus or the viewport to its declared target.'
+        : 'Activating the bypass link did not move focus or the viewport to its declared target.'
+    });
+  }
+
+  await page.locator(`[${focusIdentityAttribute}]`).evaluateAll((elements, attribute) => {
+    for (const element of elements) element.removeAttribute(attribute);
+  }, focusIdentityAttribute);
+  await scrollBehaviorStyle.evaluate((element) => (element as Element).remove()).catch(() => undefined);
 
   await page.evaluate(() => {
     const body = document.body;
@@ -599,12 +805,19 @@ export async function runKeyboardChecks(page: Page, maxTabStops: number): Promis
     completedCycle: repeatedAt !== undefined,
     truncated: repeatedAt === undefined && sequence.length >= maxTabStops,
     scope: modalOnly ? 'modal-only' : sequence.length ? 'document' : 'unknown',
+    journeys,
     ...(modalOnly && modalSelector ? { modalSelector } : {})
   };
 }
 
 export async function runResponsiveChecks(page: Page): Promise<ResponsiveCheckResult> {
-  const base = await page.evaluate(() => {
+  // Keyboard and disclosure checks can leave a long page scrolled beneath a sticky header.
+  // Reflow evidence must start from a deterministic position instead of reporting whatever
+  // happened to be under that header at the end of an earlier test.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(50);
+
+  const snapshot = (phase: 'default' | 'text-resize-200' | 'text-spacing') => page.evaluate(({ currentPhase, focusables }) => {
     const cssPath = (element: Element): string => {
       if (element.id) return `#${CSS.escape(element.id)}`;
       const parts: string[] = [];
@@ -622,6 +835,125 @@ export async function runResponsiveChecks(page: Page): Promise<ResponsiveCheckRe
       }
       return parts.join(' > ');
     };
+    const visible = (element: Element): boolean => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.contentVisibility !== 'hidden';
+    };
+    const carouselRootSelector = [
+      '[data-carousel]',
+      '[aria-roledescription="carousel" i]',
+      '.slick-slider',
+      '.js-slick-carousel',
+      '[class*="carousel" i]',
+      '[class*="slider" i]'
+    ].join(',');
+    const carouselSlideSelector = [
+      '.slick-slide',
+      '[data-carousel-slide]',
+      '[class*="carousel-slide" i]',
+      '[class~="slide" i]',
+      '[role="group"]'
+    ].join(',');
+    const verifiedCarouselRoot = (element: Element): Element | null => {
+      let root: Element | null = element;
+      while (root) {
+        if (root.matches(carouselRootSelector) && root.querySelectorAll(carouselSlideSelector).length >= 2) return root;
+        root = root.parentElement;
+      }
+      return null;
+    };
+    const isIntentionalCarouselViewport = (element: Element): boolean => verifiedCarouselRoot(element) === element;
+    const isIntentionallyVisuallyHidden = (element: Element): boolean => {
+      const node = element as HTMLElement;
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      const clippedOut = style.clip === 'rect(0px, 0px, 0px, 0px)'
+        || /^inset\((?:50%|100%)(?:\s+(?:50%|100%)){0,3}\)$/i.test(style.clipPath);
+      const tinyClippedBox = rect.width <= 2
+        && rect.height <= 2
+        && /^(absolute|fixed)$/.test(style.position)
+        && /^(hidden|clip)$/.test(style.overflow)
+        && (style.whiteSpace === 'nowrap' || clippedOut);
+      const authoredHiddenClass = /(?:^|[\s_-])(?:sr-only|screen-reader-only|visually-hidden)(?:$|[\s_-])/i.test(
+        typeof node.className === 'string' ? node.className : ''
+      );
+      return clippedOut || (tinyClippedBox && authoredHiddenClass);
+    };
+    const usesOffscreenTextReplacement = (element: Element): boolean => {
+      const node = element as HTMLElement;
+      const style = getComputedStyle(node);
+      const textIndent = Number.parseFloat(style.textIndent);
+      return Number.isFinite(textIndent)
+        && Math.abs(textIndent) >= 1_000
+        && /^(hidden|clip)$/.test(style.overflowX);
+    };
+    const isMeaningfulClippedNode = (element: Element): boolean => {
+      if (element.closest('[hidden], [inert], [aria-hidden="true"], .slick-cloned:not(.slick-active)')) return false;
+      if (verifiedCarouselRoot(element)) return false;
+      if (isIntentionallyVisuallyHidden(element) || usesOffscreenTextReplacement(element)) return false;
+      if (element.matches(focusables)) return true;
+      if (element instanceof HTMLImageElement) {
+        // A cover image is deliberately cropped by its viewport; its accessible alternative
+        // remains available, so the crop alone is not lost or clipped content.
+        if (getComputedStyle(element).objectFit === 'cover' && !element.closest(focusables)) return false;
+        return element.alt.trim().length > 0;
+      }
+      if (
+        element instanceof HTMLVideoElement
+        || element instanceof HTMLCanvasElement
+        || element instanceof HTMLObjectElement
+        || element instanceof HTMLIFrameElement
+      ) return true;
+      if ((element.getAttribute('aria-label') ?? element.getAttribute('title') ?? '').trim()) return true;
+      return [...element.childNodes].some((node) => node instanceof Text && Boolean(node.textContent?.trim()));
+    };
+    const findMeaningfulClippedContent = (
+      element: Element,
+      horizontal: boolean,
+      vertical: boolean
+    ): { selector: string; kind: 'text' | 'interactive' | 'image' | 'media' | 'labelled' } | null => {
+      const node = element as HTMLElement;
+      const containerRect = node.getBoundingClientRect();
+      const left = containerRect.left + node.clientLeft;
+      const top = containerRect.top + node.clientTop;
+      const right = left + node.clientWidth;
+      const bottom = top + node.clientHeight;
+      const candidates = [element, ...element.querySelectorAll('*')].slice(0, 1_000);
+      const crossesBoundary = (rect: DOMRect | DOMRectReadOnly): boolean => {
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        return (horizontal && (rect.left < left - 2 || rect.right > right + 2))
+          || (vertical && (rect.top < top - 2 || rect.bottom > bottom + 2));
+      };
+      for (const candidate of candidates) {
+        if (!isMeaningfulClippedNode(candidate)) continue;
+        const selector = cssPath(candidate);
+        if (candidate.matches(focusables) && crossesBoundary(candidate.getBoundingClientRect())) {
+          return { selector, kind: 'interactive' };
+        }
+        if (candidate instanceof HTMLImageElement && crossesBoundary(candidate.getBoundingClientRect())) {
+          return { selector, kind: 'image' };
+        }
+        if (
+          (candidate instanceof HTMLVideoElement
+            || candidate instanceof HTMLCanvasElement
+            || candidate instanceof HTMLObjectElement
+            || candidate instanceof HTMLIFrameElement)
+          && crossesBoundary(candidate.getBoundingClientRect())
+        ) return { selector, kind: 'media' };
+        if (
+          (candidate.getAttribute('aria-label') ?? candidate.getAttribute('title') ?? '').trim()
+          && crossesBoundary(candidate.getBoundingClientRect())
+        ) return { selector, kind: 'labelled' };
+        for (const child of candidate.childNodes) {
+          if (!(child instanceof Text) || !child.textContent?.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(child);
+          if ([...range.getClientRects()].some(crossesBoundary)) return { selector, kind: 'text' };
+        }
+      }
+      return null;
+    };
     const documentWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
     const overflowElements = [...document.body.querySelectorAll('*')]
       .map((element) => ({ element, rect: element.getBoundingClientRect() }))
@@ -633,8 +965,158 @@ export async function runResponsiveChecks(page: Page): Promise<ResponsiveCheckRe
         right: Math.round(rect.right * 10) / 10,
         width: Math.round(rect.width * 10) / 10
       }));
-    return { horizontalOverflow: Math.max(0, documentWidth - innerWidth), overflowElements };
+    const clippedElements = [...document.body.querySelectorAll('*')]
+      .filter(visible)
+      .filter((element) => !isIntentionalCarouselViewport(element))
+      .filter((element) => !isIntentionallyVisuallyHidden(element))
+      .filter((element) => !usesOffscreenTextReplacement(element))
+      .flatMap((element) => {
+        const node = element as HTMLElement;
+        const style = getComputedStyle(node);
+        const horizontal = /^(hidden|clip)$/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 2;
+        const vertical = /^(hidden|clip)$/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 2;
+        if (!horizontal && !vertical) return [];
+        const clippedContent = findMeaningfulClippedContent(node, horizontal, vertical);
+        if (!clippedContent) return [];
+        return [{
+          selector: cssPath(node),
+          axis: horizontal && vertical ? 'both' as const : horizontal ? 'horizontal' as const : 'vertical' as const,
+          phase: currentPhase,
+          clientWidth: node.clientWidth,
+          clientHeight: node.clientHeight,
+          scrollWidth: node.scrollWidth,
+          scrollHeight: node.scrollHeight,
+          contentSelector: clippedContent.selector,
+          contentKind: clippedContent.kind
+        }];
+      })
+      .slice(0, 50);
+    const interactive = [...document.querySelectorAll<HTMLElement>(focusables)].filter(visible).slice(0, 100);
+    const overlapPairs: ResponsiveCheckResult['overlapPairs'] = [];
+    for (let firstIndex = 0; firstIndex < interactive.length && overlapPairs.length < 30; firstIndex += 1) {
+      const first = interactive[firstIndex]!;
+      const firstRect = first.getBoundingClientRect();
+      for (let secondIndex = firstIndex + 1; secondIndex < interactive.length && overlapPairs.length < 30; secondIndex += 1) {
+        const second = interactive[secondIndex]!;
+        if (first.contains(second) || second.contains(first)) continue;
+        const secondRect = second.getBoundingClientRect();
+        const overlapLeft = Math.max(0, firstRect.left, secondRect.left);
+        const overlapTop = Math.max(0, firstRect.top, secondRect.top);
+        const overlapRight = Math.min(innerWidth, firstRect.right, secondRect.right);
+        const overlapBottom = Math.min(innerHeight, firstRect.bottom, secondRect.bottom);
+        const overlapWidth = overlapRight - overlapLeft;
+        const overlapHeight = overlapBottom - overlapTop;
+        if (overlapWidth <= 4 || overlapHeight <= 4) continue;
+        const overlapArea = overlapWidth * overlapHeight;
+        const smallerElementArea = Math.min(firstRect.width * firstRect.height, secondRect.width * secondRect.height);
+        const smallerElementOverlapPercent = smallerElementArea > 0 ? (overlapArea / smallerElementArea) * 100 : 0;
+        if (overlapArea < 64 || smallerElementOverlapPercent < 25) continue;
+
+        const insetX = Math.min(2, overlapWidth / 4);
+        const insetY = Math.min(2, overlapHeight / 4);
+        const samplePoints: Array<[number, number]> = [
+          [overlapLeft + overlapWidth / 2, overlapTop + overlapHeight / 2],
+          [overlapLeft + insetX, overlapTop + insetY],
+          [overlapRight - insetX, overlapTop + insetY],
+          [overlapLeft + insetX, overlapBottom - insetY],
+          [overlapRight - insetX, overlapBottom - insetY]
+        ];
+        let firstOnTop = 0;
+        let secondOnTop = 0;
+        for (const [x, y] of samplePoints) {
+          const topTarget = document.elementsFromPoint(x, y).find((candidate) => (
+            candidate === first || first.contains(candidate) || candidate === second || second.contains(candidate)
+          ));
+          if (topTarget === first || (topTarget && first.contains(topTarget))) firstOnTop += 1;
+          else if (topTarget === second || (topTarget && second.contains(topTarget))) secondOnTop += 1;
+        }
+        const firstClearlyOccludes = firstOnTop >= 3 && secondOnTop === 0;
+        const secondClearlyOccludes = secondOnTop >= 3 && firstOnTop === 0;
+        if (!firstClearlyOccludes && !secondClearlyOccludes) continue;
+        const obscuredElementArea = firstClearlyOccludes
+          ? secondRect.width * secondRect.height
+          : firstRect.width * firstRect.height;
+        const obscuredElementOverlapPercent = obscuredElementArea > 0
+          ? (overlapArea / obscuredElementArea) * 100
+          : 0;
+        // A small control deliberately overlaid on a large linked card does not materially
+        // obscure the card. Measure the control underneath, not whichever control is smaller.
+        if (obscuredElementOverlapPercent < 25) continue;
+        const firstSelector = cssPath(first);
+        const secondSelector = cssPath(second);
+        overlapPairs.push({
+          firstSelector,
+          secondSelector,
+          phase: currentPhase,
+          overlapWidth: Math.round(overlapWidth * 10) / 10,
+          overlapHeight: Math.round(overlapHeight * 10) / 10,
+          overlapArea: Math.round(overlapArea * 10) / 10,
+          smallerElementOverlapPercent: Math.round(smallerElementOverlapPercent * 10) / 10,
+          obscuredElementOverlapPercent: Math.round(obscuredElementOverlapPercent * 10) / 10,
+          obscuredSelector: firstClearlyOccludes ? secondSelector : firstSelector,
+          occludingSelector: firstClearlyOccludes ? firstSelector : secondSelector,
+          hitTestSampleCount: Math.max(firstOnTop, secondOnTop)
+        });
+      }
+    }
+    const visibleInteractiveElements = interactive.map((element) => {
+      const name = (
+        element.getAttribute('aria-label')
+        ?? element.getAttribute('title')
+        ?? element.querySelector('img[alt]')?.getAttribute('alt')
+        ?? element.textContent
+        ?? ''
+      ).replace(/\s+/g, ' ').trim();
+      const role = element.getAttribute('role') ?? element.tagName.toLowerCase();
+      const destination = element instanceof HTMLAnchorElement
+        ? element.href
+        : element instanceof HTMLInputElement
+          ? element.type
+          : '';
+      return {
+        selector: cssPath(element),
+        name,
+        semanticKey: [role, name.toLocaleLowerCase(), destination].join('|')
+      };
+    });
+    return {
+      horizontalOverflow: Math.max(0, documentWidth - innerWidth),
+      overflowElements,
+      clippedElements,
+      overlapPairs,
+      visibleInteractiveElements
+    };
+  }, { currentPhase: phase, focusables: focusableSelector });
+
+  const repeatedSnapshot = async (phase: 'default' | 'text-resize-200' | 'text-spacing') => {
+    const first = await snapshot(phase);
+    await page.waitForTimeout(150);
+    const second = await snapshot(phase);
+    const clippingKey = (item: typeof first.clippedElements[number]): string => (
+      `${item.selector}|${item.axis}|${item.contentSelector ?? ''}`
+    );
+    const secondClippingKeys = new Set(second.clippedElements.map(clippingKey));
+    const stableClippedElements = first.clippedElements
+      .filter((item) => secondClippingKeys.has(clippingKey(item)))
+      .map((item) => ({ ...item, repeatConfirmed: true }));
+    const overlapKey = (item: typeof first.overlapPairs[number]): string => (
+      `${item.phase}|${[item.firstSelector, item.secondSelector].sort().join('|')}`
+    );
+    const secondOverlapKeys = new Set(second.overlapPairs.map(overlapKey));
+    const stableOverlapPairs = first.overlapPairs.filter((item) => secondOverlapKeys.has(overlapKey(item)));
+    return { first, second, stableClippedElements, stableOverlapPairs };
+  };
+
+  const baseSamples = await repeatedSnapshot('default');
+  const base = baseSamples.second;
+
+  const textResizeStyle = await page.addStyleTag({
+    content: 'html { font-size: 200% !important; }'
   });
+  await page.waitForTimeout(100);
+  const resizedSamples = await repeatedSnapshot('text-resize-200');
+  const resized = resizedSamples.second;
+  await textResizeStyle.evaluate((element) => (element as Element).remove());
 
   const spacingStyle = await page.addStyleTag({
     content: `
@@ -649,11 +1131,85 @@ export async function runResponsiveChecks(page: Page): Promise<ResponsiveCheckRe
     `
   });
   await page.waitForTimeout(100);
-  const textSpacingOverflow = await page.evaluate(
-    () => Math.max(0, Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)
-  );
+  const spacedSamples = await repeatedSnapshot('text-spacing');
+  const spaced = spacedSamples.second;
   await spacingStyle.evaluate((element) => (element as Element).remove());
-  return { ...base, textSpacingOverflow };
+  const sameInteractiveElement = (
+    left: typeof base.visibleInteractiveElements[number],
+    right: typeof base.visibleInteractiveElements[number]
+  ): boolean => left.selector === right.selector || (Boolean(left.semanticKey) && left.semanticKey === right.semanticKey);
+  const stableBaseline = baseSamples.first.visibleInteractiveElements.filter((element) => (
+    baseSamples.second.visibleInteractiveElements.some((candidate) => sameInteractiveElement(element, candidate))
+  ));
+  const missingAfterStress = (
+    stressedElements: typeof base.visibleInteractiveElements
+  ): Array<{ selector: string; name: string }> => {
+    const remaining = [...stressedElements];
+    return stableBaseline.flatMap((element) => {
+      const matchIndex = remaining.findIndex((candidate) => sameInteractiveElement(element, candidate));
+      if (matchIndex >= 0) {
+        remaining.splice(matchIndex, 1);
+        return [];
+      }
+      return [{ selector: element.selector, name: element.name }];
+    });
+  };
+  const repeatConfirmedMissing = (
+    firstStress: typeof base.visibleInteractiveElements,
+    secondStress: typeof base.visibleInteractiveElements
+  ): Array<{ selector: string; name: string; repeatConfirmed: true }> => {
+    const secondMissing = new Set(missingAfterStress(secondStress).map((item) => item.selector));
+    return missingAfterStress(firstStress)
+      .filter((item) => secondMissing.has(item.selector))
+      .map((item) => ({ ...item, repeatConfirmed: true }));
+  };
+  const lostInteractiveElements = repeatConfirmedMissing(
+    spacedSamples.first.visibleInteractiveElements,
+    spacedSamples.second.visibleInteractiveElements
+  );
+  const textResizeLostInteractiveElements = repeatConfirmedMissing(
+    resizedSamples.first.visibleInteractiveElements,
+    resizedSamples.second.visibleInteractiveElements
+  );
+  const clippingKey = (item: typeof baseSamples.stableClippedElements[number]): string => (
+    item.selector
+  );
+  const overlapKey = (item: typeof baseSamples.stableOverlapPairs[number]): string => (
+    [item.firstSelector, item.secondSelector].sort().join('|')
+  );
+  const seenClipping = new Set<string>();
+  const clippedElements = [
+    ...baseSamples.stableClippedElements,
+    ...resizedSamples.stableClippedElements,
+    ...spacedSamples.stableClippedElements
+  ].filter((item) => {
+    const key = clippingKey(item);
+    if (seenClipping.has(key)) return false;
+    seenClipping.add(key);
+    return true;
+  });
+  const seenOverlaps = new Set<string>();
+  const overlapPairs = [
+    ...baseSamples.stableOverlapPairs,
+    ...resizedSamples.stableOverlapPairs,
+    ...spacedSamples.stableOverlapPairs
+  ].filter((item) => {
+    const key = overlapKey(item);
+    if (seenOverlaps.has(key)) return false;
+    seenOverlaps.add(key);
+    return true;
+  });
+  return {
+    completed: true,
+    horizontalOverflow: base.horizontalOverflow,
+    overflowElements: base.overflowElements,
+    textResizeOverflow: resized.horizontalOverflow,
+    textSpacingOverflow: spaced.horizontalOverflow,
+    clippedElements,
+    overlapPairs,
+    lostInteractiveElements,
+    textResizeLostInteractiveElements
+  };
 }
 
 function locatorDescription(locator: Locator): Promise<{ name: string; selector: string }> {
@@ -1155,6 +1711,7 @@ function incompleteDisclosureResult(
     spaceAfterExpanded: null,
     controlledVisibleAfterSpace: null,
     spaceTestCompleted: false,
+    controlledFocusableCount: 0,
     firstTabSelector: null,
     tabEnteredControlledRegion: null,
     ...partial,
@@ -1252,6 +1809,7 @@ export async function runDisclosureChecks(page: Page): Promise<DisclosureCheckRe
 
       let tabEnteredControlledRegion: boolean | null = null;
       let firstTabSelector: string | null = null;
+      let controlledFocusableCount = 0;
       if (
         afterEnterState.focused
         && afterEnterState.expanded === 'true'
@@ -1259,9 +1817,32 @@ export async function runDisclosureChecks(page: Page): Promise<DisclosureCheckRe
         && afterEnterState.controls
       ) {
         const controlledIds = afterEnterState.controls.split(/\s+/).filter(Boolean);
-        const panelSelectors = controlledIds.map((id) => `#${id.replaceAll(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1')}`);
-        const focusable = page.locator(panelSelectors.map((selector) => `${selector} ${focusableSelector}`).join(', '));
-        if ((await focusable.count()) > 0) {
+        controlledFocusableCount = await page.evaluate(({ ids, selector }) => {
+          const renderedForKeyboard = (element: Element): boolean => {
+            if (!(element instanceof HTMLElement) || element.tabIndex < 0) return false;
+            // aria-hidden does not remove descendants from the browser's sequential
+            // focus order; axe reports that separate exposure defect when applicable.
+            if (element.closest('[hidden], [inert]')) return false;
+            let current: Element | null = element;
+            while (current) {
+              const style = getComputedStyle(current);
+              if (
+                style.display === 'none'
+                || style.visibility === 'hidden'
+                || style.visibility === 'collapse'
+                || style.contentVisibility === 'hidden'
+              ) return false;
+              current = current.parentElement;
+            }
+            return true;
+          };
+          const candidates = ids.flatMap((id) => {
+            const panel = document.getElementById(id);
+            return panel ? [...panel.querySelectorAll(selector)] : [];
+          });
+          return new Set(candidates.filter(renderedForKeyboard)).size;
+        }, { ids: controlledIds, selector: focusableSelector });
+        if (controlledFocusableCount > 0) {
           await page.keyboard.press('Tab');
           const active = page.locator(':focus');
           firstTabSelector = (await active.count()) ? (await locatorDescription(active)).selector : null;
@@ -1332,6 +1913,7 @@ export async function runDisclosureChecks(page: Page): Promise<DisclosureCheckRe
         beforeState,
         afterEnterState,
         ...(afterSpaceState ? { afterSpaceState } : {}),
+        controlledFocusableCount,
         firstTabSelector,
         tabEnteredControlledRegion,
         ...(restorationError ? { restorationError } : {})

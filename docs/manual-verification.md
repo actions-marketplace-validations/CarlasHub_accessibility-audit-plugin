@@ -2,6 +2,19 @@
 
 Automation does not complete a WCAG 2.2 A/AA evaluation. Use this guide after every run and record each applicable procedure as `Pass`, `Fail`, `Not applicable` with a reason, or `Not tested`. Do not report an unperformed check as passed.
 
+## Coverage contract
+
+Every generated report contains one criterion-specific human-verification row for each of the 55 active WCAG 2.2 Level A and AA success criteria:
+
+- Perceivable: `1.1.1`; `1.2.1`–`1.2.5`; `1.3.1`–`1.3.5`; `1.4.1`–`1.4.5`; and `1.4.10`–`1.4.13`.
+- Operable: `2.1.1`, `2.1.2`, `2.1.4`; `2.2.1`, `2.2.2`; `2.3.1`; `2.4.1`–`2.4.7`, `2.4.11`; and `2.5.1`–`2.5.4`, `2.5.7`, `2.5.8`.
+- Understandable: `3.1.1`, `3.1.2`; `3.2.1`–`3.2.4`, `3.2.6`; and `3.3.1`–`3.3.4`, `3.3.7`, `3.3.8`.
+- Robust: `4.1.2`, `4.1.3`.
+
+WCAG 4.1.1 is excluded because WCAG 2.2 removed it. The 31 Level AAA criteria are advisory and do not change the Level AA target.
+
+The row proves that the criterion was accounted for; it does not prove the procedure was performed. Record the requested evidence and an explicit verdict for every row. Use `Not applicable` only with a criterion-specific reason and `Not tested` whenever the required page, state, journey, technology, device, content, or reviewer was not assessed. Automated evidence may support the decision, but absence of a finding never supplies a pass.
+
 ## First validate the generated evidence
 
 1. Confirm the workbook auditor, landing-page QA URL, and requested URL scope.
@@ -31,7 +44,7 @@ Record the browser and operating system. Reproduce any failure with the exact co
 
 ## Test supported screen-reader and browser combinations
 
-This plugin does not run a screen reader. A tester familiar with the agreed assistive technologies should manually test desktop and mobile combinations supported by the product.
+The optional native GitHub Actions workflow can run bounded Guidepup journeys with VoiceOver on macOS and NVDA on Windows and retain spoken transcripts with environment metadata. That evidence helps reproduce announcements, but it does not determine whether a complete task is understandable or prove conformance. A tester familiar with the agreed assistive technologies must still manually test the desktop and mobile combinations supported by the product.
 
 For navigation, forms, search, tabs, dialogs, carousels, and dynamic messages, confirm:
 
@@ -43,7 +56,7 @@ For navigation, forms, search, tabs, dialogs, carousels, and dynamic messages, c
 - headings, regions, lists, tables, and form groups provide useful navigation;
 - visible labels and announced names are consistent enough for speech-input users.
 
-Record the screen reader, version, browser, browser version, operating system, commands used, announcement heard, expected result, and outcome.
+Record the screen reader, version, browser, browser version, operating system, commands used, announcement heard, expected result, and outcome. When a native CI transcript exists, cite it as supporting evidence and record what the human tester independently verified.
 
 ## Verify zoom, text resize, and reflow
 

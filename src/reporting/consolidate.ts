@@ -4,6 +4,10 @@ function uniqueSorted(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort();
 }
 
+function evidenceIdentity(item: Finding['evidence'][number]): string {
+  return JSON.stringify(item);
+}
+
 function conciseMergedText(first?: string, second?: string, limit = 6): string | undefined {
   let hadTruncation = false;
   const values = [...new Set([first, second]
@@ -23,9 +27,73 @@ function conciseMergedText(first?: string, second?: string, limit = 6): string |
 
 function canonicalRule(ruleId: string): string {
   if (['axe-image-alt', 'image-missing-alt'].includes(ruleId)) return 'image-alt';
-  if (['axe-label', 'form-field-no-label'].includes(ruleId)) return 'form-label';
-  if (['axe-button-name', 'axe-link-name', 'interactive-control-no-name'].includes(ruleId)) return 'control-name';
+  if (['axe-label', 'axe-select-name', 'axe-textarea-name', 'form-field-no-label'].includes(ruleId)) return 'form-label';
+  if (['axe-aria-command-name', 'axe-button-name', 'axe-input-button-name', 'axe-link-name', 'interactive-control-no-name'].includes(ruleId)) return 'control-name';
   return ruleId;
+}
+
+function equivalentAxeDomFamily(ruleId: string): string | null {
+  if (['axe-image-alt', 'image-missing-alt'].includes(ruleId)) return 'image-alt';
+  if (['axe-label', 'axe-select-name', 'axe-textarea-name', 'form-field-no-label'].includes(ruleId)) return 'form-label';
+  if (['axe-aria-command-name', 'axe-button-name', 'axe-input-button-name', 'axe-link-name', 'interactive-control-no-name'].includes(ruleId)) return 'control-name';
+  return null;
+}
+
+function normalizedSelector(selector: string): string {
+  return selector.trim().replace(/\s+/g, ' ');
+}
+
+function normalizedEvidenceDetail(detail: string): string {
+  return detail.trim().replace(/\s+/g, ' ');
+}
+
+function sharesRenderedElement(first: Finding, second: Finding): boolean {
+  const firstSelectors = new Set(first.selectors.map(normalizedSelector));
+  if (second.selectors.some((selector) => firstSelectors.has(normalizedSelector(selector)))) return true;
+
+  return first.evidence.some((firstEvidence) => second.evidence.some((secondEvidence) => (
+    firstEvidence.pageUrl === secondEvidence.pageUrl
+    && Boolean(normalizedEvidenceDetail(firstEvidence.detail))
+    && normalizedEvidenceDetail(firstEvidence.detail) === normalizedEvidenceDetail(secondEvidence.detail)
+  )));
+}
+
+function mergeEquivalentAxeDomFindings(findings: Finding[]): Finding[] {
+  const working = findings.map((finding) => ({
+    ...finding,
+    wcag: [...finding.wcag],
+    urls: [...finding.urls],
+    viewports: [...finding.viewports],
+    selectors: [...finding.selectors],
+    evidence: [...finding.evidence]
+  }));
+  const consumed = new Set<number>();
+
+  for (let axeIndex = 0; axeIndex < working.length; axeIndex += 1) {
+    const axe = working[axeIndex]!;
+    const family = axe.ruleId.startsWith('axe-') ? equivalentAxeDomFamily(axe.ruleId) : null;
+    if (!family) continue;
+
+    for (let domIndex = 0; domIndex < working.length; domIndex += 1) {
+      if (domIndex === axeIndex || consumed.has(domIndex)) continue;
+      const dom = working[domIndex]!;
+      if (dom.ruleId.startsWith('axe-') || equivalentAxeDomFamily(dom.ruleId) !== family) continue;
+      if (!axe.urls.some((url) => dom.urls.includes(url))) continue;
+      if (!sharesRenderedElement(axe, dom)) continue;
+
+      const context = mergeFindingContext([axe, dom]);
+      axe.wcag = uniqueSorted([...axe.wcag, ...dom.wcag]);
+      axe.urls = context.urls;
+      axe.viewports = context.viewports;
+      axe.selectors = context.selectors;
+      axe.evidence = context.evidence;
+      if (context.componentName) axe.componentName = context.componentName;
+      if (context.componentLocation) axe.componentLocation = context.componentLocation;
+      consumed.add(domIndex);
+    }
+  }
+
+  return working.filter((_, index) => !consumed.has(index));
 }
 
 function rootCause(finding: Finding): string {
@@ -51,10 +119,12 @@ function mergeFindingContext(findings: Finding[]): Pick<Finding, 'urls' | 'viewp
     urls: uniqueSorted(findings.flatMap((finding) => finding.urls)),
     viewports: uniqueSorted(findings.flatMap((finding) => finding.viewports)),
     selectors: uniqueSorted(findings.flatMap((finding) => finding.selectors)),
-    evidence: [...new Map(findings.flatMap((finding) => finding.evidence).map((item) => [
-      JSON.stringify([item.kind, item.pageUrl, item.viewport ?? '', item.selector ?? '', item.detail, item.screenshot ?? '']),
-      item
-    ])).values()].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+    // Preserve every observed occurrence. Two byte-identical records can still
+    // represent two separately collected failures and must not disappear merely
+    // because their rendered evidence happens to match.
+    evidence: findings
+      .flatMap((finding) => finding.evidence)
+      .sort((a, b) => evidenceIdentity(a).localeCompare(evidenceIdentity(b)))
   };
   const componentName = findings.reduce<string | undefined>(
     (merged, finding) => conciseMergedText(merged, finding.componentName),
@@ -215,7 +285,7 @@ function rollUpDescriptionListStructure(findings: Finding[]): Finding[] {
       urls: uniqueSorted(grouped.flatMap((finding) => finding.urls)),
       viewports: uniqueSorted(grouped.flatMap((finding) => finding.viewports)),
       selectors: uniqueSorted(grouped.flatMap((finding) => finding.selectors)),
-      evidence: grouped.flatMap((finding) => finding.evidence),
+      evidence: mergeFindingContext(grouped).evidence,
       assignment: 'Development',
       effort: 'Small',
       translationRequired: 'No'
@@ -236,7 +306,7 @@ export function consolidateFindings(findings: Finding[]): Finding[] {
     if (context.componentLocation) existing.componentLocation = context.componentLocation;
   };
   const localFindings = new Map<string, Finding>();
-  const ordered = [...findings].sort((a, b) => JSON.stringify([
+  const ordered = mergeEquivalentAxeDomFindings(findings).sort((a, b) => JSON.stringify([
     a.ruleId,
     a.key,
     uniqueSorted(a.urls),
@@ -302,6 +372,27 @@ export function consolidateFindings(findings: Finding[]): Finding[] {
       || a.key.localeCompare(b.key)
       || uniqueSorted(a.urls).join('|').localeCompare(uniqueSorted(b.urls).join('|'));
   });
+}
+
+/** Ensures consolidation preserves the multiplicity of every evidence record. */
+export function assertLosslessConsolidation(before: Finding[], after: Finding[]): void {
+  const countEvidence = (findings: Finding[]): Map<string, number> => {
+    const counts = new Map<string, number>();
+    for (const item of findings.flatMap((finding) => finding.evidence)) {
+      const identity = evidenceIdentity(item);
+      counts.set(identity, (counts.get(identity) ?? 0) + 1);
+    }
+    return counts;
+  };
+  const expected = countEvidence(before);
+  const retained = countEvidence(after);
+  const missing = [...expected.entries()].reduce(
+    (total, [identity, count]) => total + Math.max(0, count - (retained.get(identity) ?? 0)),
+    0
+  );
+  if (missing) {
+    throw new Error(`Finding consolidation discarded ${missing} evidence observation occurrence(s).`);
+  }
 }
 
 export function assertRemediationOnlyNotes(findings: Finding[]): void {

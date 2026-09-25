@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateGate, parseBooleanInput, parseFailurePolicy, parseListInput, parseWcagLevel } from '../src/github-action.js';
+import {
+  evaluateGate,
+  parseBooleanInput,
+  parseFailurePolicy,
+  parseJourneysInput,
+  parseListInput,
+  parsePositiveInteger,
+  parseWcagLevel,
+  resolveAllowedHosts
+} from '../src/github-action.js';
 
 describe('GitHub Action inputs', () => {
   it('reads one URL per line and JSON arrays without treating URL commas as separators', () => {
@@ -11,6 +20,13 @@ describe('GitHub Action inputs', () => {
       'https://example.test/a',
       'https://example.test/b'
     ]);
+    expect(parseListInput(
+      'https://loreal.runmytests.eu/en  https://loreal.runmytests.eu/en/search-jobs https://loreal.runmytests.eu/en/saved-jobs'
+    )).toEqual([
+      'https://loreal.runmytests.eu/en',
+      'https://loreal.runmytests.eu/en/search-jobs',
+      'https://loreal.runmytests.eu/en/saved-jobs'
+    ]);
   });
 
   it('validates boolean and failure policy values', () => {
@@ -20,6 +36,37 @@ describe('GitHub Action inputs', () => {
     expect(() => parseFailurePolicy('review')).toThrow(/fail-on must be one of/);
     expect(parseWcagLevel('aaa')).toBe('AAA');
     expect(() => parseWcagLevel('A')).toThrow(/AA or AAA/);
+  });
+
+  it('enforces the documented Action concurrency range', () => {
+    expect(parsePositiveInteger('', 2, 'concurrency', 8)).toBe(2);
+    expect(parsePositiveInteger('8', 2, 'concurrency', 8)).toBe(8);
+    expect(() => parsePositiveInteger('9', 2, 'concurrency', 8)).toThrow('between 1 and 8');
+  });
+
+  it('validates configured keyboard and interaction journeys', () => {
+    expect(parseJourneysInput(JSON.stringify({ journeys: [{
+      id: 'open-menu',
+      title: 'Open the primary menu',
+      categories: ['keyboard', 'interaction'],
+      steps: [
+        { action: 'focus', selector: '#menu' },
+        { action: 'press', key: 'Enter' },
+        { action: 'assert', expectation: 'expanded', selector: '#menu' }
+      ]
+    }] }))).toEqual([expect.objectContaining({ id: 'open-menu', categories: ['keyboard', 'interaction'] })]);
+    expect(() => parseJourneysInput('[{"id":"unsafe","title":"Missing assertions","categories":["keyboard"],"steps":[]}]')).toThrow();
+  });
+
+  it('derives a safe hostname allowlist when users provide only URLs', () => {
+    expect(resolveAllowedHosts([
+      'https://example.test/',
+      'https://example.test/contact',
+      'https://docs.example.test/'
+    ], [])).toEqual(['example.test', 'docs.example.test']);
+    expect(resolveAllowedHosts(['https://example.test/'], ['preview.example.test'])).toEqual(['preview.example.test']);
+    expect(() => resolveAllowedHosts(['pages.csv'], [])).toThrow(/explicit HTTP\(S\) URLs only/);
+    expect(() => resolveAllowedHosts(['https://user:secret@example.test/'], [])).toThrow(/without embedded credentials/);
   });
 });
 

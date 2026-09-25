@@ -1,18 +1,20 @@
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, unlink } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { chromium, type Browser, type Locator, type Page } from 'playwright';
 import axe from 'axe-core';
 import type {
   AuditExecutionContext,
+  AuditCheckId,
   AuditOptions,
   AuditProgressEvent,
   AuditSummary,
   AxeRunMetadata,
   AxeViolationResult,
   ConsentHandlingResult,
+  CollectionOutcome,
   DomCheckResult,
   ElementContext,
   ElementScreenshot,
@@ -24,16 +26,27 @@ import type {
 } from '../types.js';
 import { REQUIRED_MANUAL_CHECKS } from './manual-checks.js';
 import { runDisclosureChecks, runDomChecks, runKeyboardChecks, runLinkChecks, runResponsiveChecks, runTabChecks } from './browser-checks.js';
+import { runConfiguredJourneyChecks } from './journey-checks.js';
 import { collectElementContexts, detectInteractionBlocker, dismissConsentBanner } from './page-preparation.js';
 import { findingsFromPage } from './findings.js';
 import { buildCoverageMatrix } from './coverage.js';
-import { assertRemediationOnlyNotes, consolidateFindings } from '../reporting/consolidate.js';
+import { buildWcagCriterionLedger } from './wcag-criteria.js';
+import { applyConfirmedFindingConfidenceGate, assertAuditQualityContract, AUDIT_QUALITY_CONTRACT } from './quality-contract.js';
+import { standardsForFinding } from './standards.js';
+import { assertCanonicalAuditSummary, assertCollectionCompleteness } from './canonical-validation.js';
+import { assertLosslessConsolidation, assertRemediationOnlyNotes, consolidateFindings } from '../reporting/consolidate.js';
+import { assignFindingIds } from '../reporting/finding-id.js';
+import { writeJsonReport } from '../reporting/json.js';
 import { singleLineText } from '../text.js';
 import { urlRestrictionReason } from '../urls.js';
 
 const CANCELLED_REASON = 'The audit was stopped by the user. Results include only work completed before cancellation.';
 const MAX_CAPTURED_RUNTIME_ERRORS = 50;
 const require = createRequire(import.meta.url);
+
+export function isBrowserNetworkConsoleError(message: string): boolean {
+  return /^Failed to load resource:\s+net::ERR_[A-Z0-9_]+$/i.test(message.trim());
+}
 
 function emptyDom(): DomCheckResult {
   return {
@@ -50,6 +63,23 @@ function emptyDom(): DomCheckResult {
     tablesForReview: [],
     autoplayMedia: []
   };
+}
+
+function domObservationCount(dom: DomCheckResult): number {
+  return Object.values(dom).reduce((count, value) => count + (Array.isArray(value) ? value.length : 0), 0)
+    + (dom.h1Count === 1 ? 0 : 1)
+    + (dom.mainCount === 1 ? 0 : 1);
+}
+
+function responsiveObservationCount(responsive: ViewportAudit['responsive']): number {
+  return responsive.overflowElements.length
+    + responsive.clippedElements.length
+    + responsive.overlapPairs.length
+    + responsive.lostInteractiveElements.length
+    + (responsive.textResizeLostInteractiveElements?.length ?? 0)
+    + (responsive.horizontalOverflow > 2 ? 1 : 0)
+    + (responsive.textSpacingOverflow > Math.max(2, responsive.horizontalOverflow + 2) ? 1 : 0)
+    + ((responsive.textResizeOverflow ?? 0) > Math.max(2, responsive.horizontalOverflow + 2) ? 1 : 0);
 }
 
 async function emitProgress(execution: AuditExecutionContext, event: AuditProgressEvent): Promise<void> {
@@ -397,13 +427,56 @@ function emptyConsent(): ConsentHandlingResult {
   };
 }
 
-async function auditViewport(
+export interface AuditViewportDependencies {
+  runAxe: typeof runAxe;
+  runDomChecks: typeof runDomChecks;
+  runKeyboardChecks: typeof runKeyboardChecks;
+  runConfiguredJourneyChecks: typeof runConfiguredJourneyChecks;
+  runDisclosureChecks: typeof runDisclosureChecks;
+  runTabChecks: typeof runTabChecks;
+  runResponsiveChecks: typeof runResponsiveChecks;
+  runLinkChecks: typeof runLinkChecks;
+  collectElementContexts: typeof collectElementContexts;
+  captureElementScreenshots: typeof captureElementScreenshots;
+  dismissConsentBanner: typeof dismissConsentBanner;
+  detectInteractionBlocker: typeof detectInteractionBlocker;
+  capturePageScreenshot: (page: Page, path: string) => Promise<void>;
+}
+
+const defaultAuditViewportDependencies: AuditViewportDependencies = {
+  runAxe,
+  runDomChecks,
+  runKeyboardChecks,
+  runConfiguredJourneyChecks,
+  runDisclosureChecks,
+  runTabChecks,
+  runResponsiveChecks,
+  runLinkChecks,
+  collectElementContexts,
+  captureElementScreenshots,
+  dismissConsentBanner,
+  detectInteractionBlocker,
+  capturePageScreenshot: async (page, path) => {
+    await mkdir(resolve(path, '..'), { recursive: true });
+    await page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' });
+  }
+};
+
+function isPartialAudit(errors: string[], axeRun: AxeRunMetadata, blocker: InteractionBlocker | null): boolean {
+  return Boolean(blocker)
+    || !axeRun.completed
+    || errors.some((message) => /^(?:DOM|Keyboard|Configured journey|Disclosure|Tab|Responsive|Link|Element context|Screenshot) checks? error:/i.test(message));
+}
+
+export async function auditViewport(
   browser: Browser,
   url: string,
   options: AuditOptions,
   viewport: AuditOptions['viewports'][number],
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  dependencyOverrides: Partial<AuditViewportDependencies> = {}
 ): Promise<ViewportAudit> {
+  const dependencies = { ...defaultAuditViewportDependencies, ...dependencyOverrides };
   const errors: string[] = [];
   let status: number | null = null;
   let finalUrl = url;
@@ -429,14 +502,53 @@ async function auditViewport(
   let axeResults: AxeViolationResult[] = [];
   let dom = emptyDom();
   let keyboard: ViewportAudit['keyboard'] = {
-    sequence: [], completedCycle: false, truncated: false, scope: 'unknown'
+    sequence: [], completedCycle: false, truncated: false, scope: 'unknown', journeys: []
   };
   let responsive: ViewportAudit['responsive'] = {
-    horizontalOverflow: 0, overflowElements: [], textSpacingOverflow: 0
+    completed: false,
+    horizontalOverflow: 0,
+    overflowElements: [],
+    textSpacingOverflow: 0,
+    clippedElements: [],
+    overlapPairs: [],
+    lostInteractiveElements: []
   };
   let disclosures: ViewportAudit['disclosures'] = [];
   let tabs: ViewportAudit['tabs'] = [];
   let links: ViewportAudit['links'] = [];
+  const checkIds: AuditCheckId[] = [
+    'navigation', 'axe', 'dom', 'keyboard', 'disclosures', 'tabs', 'responsive',
+    'links', 'journeys', 'element-context', 'screenshots'
+  ];
+  const collectionOutcomes: CollectionOutcome[] = checkIds.map((checkId) => ({
+    checkId,
+    status: 'not-run',
+    observationCount: 0
+  }));
+  const recordOutcome = (
+    checkId: AuditCheckId,
+    outcome: Omit<CollectionOutcome, 'checkId'>,
+    onlyIfNotRun = false
+  ): void => {
+    const index = collectionOutcomes.findIndex((item) => item.checkId === checkId);
+    if (onlyIfNotRun && collectionOutcomes[index]?.status !== 'not-run') return;
+    collectionOutcomes[index] = { checkId, ...outcome };
+  };
+  const errorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error);
+  const blockPending = (checkIdsToBlock: AuditCheckId[], blockedBy: string): void => {
+    for (const checkId of checkIdsToBlock) {
+      recordOutcome(checkId, { status: 'blocked', observationCount: 0, blockedBy }, true);
+    }
+  };
+  if (viewport.name !== 'desktop') {
+    recordOutcome('links', { status: 'not-applicable', observationCount: 0 });
+  }
+  if (options.journeys.length === 0) {
+    recordOutcome('journeys', { status: 'not-applicable', observationCount: 0 });
+  }
+  if (!options.captureScreenshots) {
+    recordOutcome('screenshots', { status: 'not-applicable', observationCount: 0 });
+  }
   const screenshot = resolve(options.outputDir, 'screenshots', `${safeSlug(url)}-${viewport.name}.png`);
   let context: Awaited<ReturnType<Browser['newContext']>> | undefined;
   const closeOnAbort = (): void => { void context?.close().catch(() => undefined); };
@@ -465,7 +577,10 @@ async function auditViewport(
     };
     page.on('pageerror', (error) => captureRuntimeError(`Page error: ${error.message}`));
     page.on('console', (message) => {
-      if (message.type() === 'error') captureRuntimeError(`Console error: ${message.text()}`);
+      const text = message.text();
+      if (message.type() === 'error' && !isBrowserNetworkConsoleError(text)) {
+        captureRuntimeError(`Console error: ${text}`);
+      }
     });
     let blockedNavigationReason: string | null = null;
     await page.route('**/*', async (route) => {
@@ -486,7 +601,19 @@ async function auditViewport(
     });
     let response: Awaited<ReturnType<Page['goto']>>;
     try {
-      response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+      response = await page.goto(url, { waitUntil: 'commit' });
+      status = response?.status() ?? null;
+      try {
+        await page.waitForLoadState('domcontentloaded', { timeout: options.timeoutMs });
+      } catch (error) {
+        const usableDocument = await page.evaluate(() => (
+          document.readyState !== 'loading'
+          && Boolean(document.body)
+          && document.body.childElementCount > 0
+        )).catch(() => false);
+        if (!usableDocument) throw error;
+        errors.push(`Navigation readiness observation: DOMContentLoaded was not observed, but the rendered document was available (${errorMessage(error)}).`);
+      }
     } catch (error) {
       if (blockedNavigationReason) throw new Error(blockedNavigationReason);
       throw error;
@@ -495,7 +622,6 @@ async function auditViewport(
     // when a routed redirect destination was aborted, so check the route signal
     // explicitly before treating the page as successfully loaded.
     if (blockedNavigationReason) throw new Error(blockedNavigationReason);
-    status = response?.status() ?? null;
     await page.waitForLoadState('networkidle', { timeout: Math.min(options.timeoutMs, 5_000) }).catch(() => undefined);
     finalUrl = page.url();
     const finalUrlRestriction = /^(file|data):/i.test(url) && finalUrl === url
@@ -506,19 +632,28 @@ async function auditViewport(
       throw new Error(`Navigation blocked: ${finalUrlRestriction}`);
     }
     title = await page.title();
-    consent = await dismissConsentBanner(page);
+    recordOutcome('navigation', { status: 'completed', observationCount: 1 });
+    consent = await dependencies.dismissConsentBanner(page);
     if (consent.error) errors.push(`Consent handling error: ${consent.error}`);
-    if (consent.found && !consent.dismissed) {
-      errors.push('A visible consent banner could not be dismissed before accessibility interaction testing.');
+    interactionBlocker = await dependencies.detectInteractionBlocker(page);
+    if (!interactionBlocker && consent.found && !consent.dismissed) {
+      interactionBlocker = {
+        selector: consent.surfaceSelector || 'consent surface',
+        role: 'consent surface',
+        name: consent.buttonName ? `Consent choice: ${consent.buttonName}` : 'Visible consent surface',
+        reason: 'A visible consent surface remained active before page-level interaction tests.'
+      };
     }
-    interactionBlocker = await detectInteractionBlocker(page);
     if (interactionBlocker) errors.push(`${interactionBlocker.reason} ${interactionBlocker.selector}`);
     try {
-      const axeOutput = await runAxe(page, options.wcagLevel);
+      const axeOutput = await dependencies.runAxe(page, options.wcagLevel);
       axeResults = axeOutput.results;
       axeRun = axeOutput.metadata;
+      recordOutcome('axe', axeRun.completed
+        ? { status: 'completed', observationCount: axeResults.reduce((count, item) => count + item.nodes.length, 0) }
+        : { status: 'failed', observationCount: 0, error: axeRun.error || 'axe did not complete.' });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessage(error);
       errors.push(`axe-core error: ${message}`);
       axeRun = {
         completed: false,
@@ -528,19 +663,36 @@ async function auditViewport(
         passCount: 0,
         passes: []
       };
+      recordOutcome('axe', { status: 'failed', observationCount: 0, error: message });
     }
     const axeTargetSizeSelectors = axeResults
       .filter((result) => result.id === 'target-size')
       .flatMap((result) => result.nodes.flatMap((node) => node.target));
     try {
-      dom = await runDomChecks(page, axeTargetSizeSelectors);
+      dom = await dependencies.runDomChecks(page, axeTargetSizeSelectors);
+      recordOutcome('dom', {
+        status: 'completed',
+        observationCount: domObservationCount(dom)
+      });
     } catch (error) {
-      errors.push(`DOM checks error: ${error instanceof Error ? error.message : String(error)}`);
+      const message = errorMessage(error);
+      errors.push(`DOM checks error: ${message}`);
+      recordOutcome('dom', { status: 'failed', observationCount: 0, error: message });
     }
-    try {
-      keyboard = await runKeyboardChecks(page, options.maxTabStops);
-    } catch (error) {
-      errors.push(`Keyboard checks error: ${error instanceof Error ? error.message : String(error)}`);
+    if (!interactionBlocker) {
+      try {
+        keyboard = await dependencies.runKeyboardChecks(page, options.maxTabStops);
+        recordOutcome('keyboard', {
+          status: 'completed',
+          observationCount: keyboard.sequence.length + keyboard.journeys.length
+        });
+      } catch (error) {
+        const message = errorMessage(error);
+        errors.push(`Keyboard checks error: ${message}`);
+        recordOutcome('keyboard', { status: 'failed', observationCount: 0, error: message });
+      }
+    } else {
+      recordOutcome('keyboard', { status: 'blocked', observationCount: 0, blockedBy: interactionBlocker.selector });
     }
     if (!interactionBlocker && keyboard.scope === 'modal-only') {
       interactionBlocker = {
@@ -551,11 +703,17 @@ async function auditViewport(
       };
       errors.push(`${interactionBlocker.reason} ${interactionBlocker.selector}`);
     }
+    if (interactionBlocker) {
+      blockPending(['disclosures', 'tabs', 'links', 'journeys'], interactionBlocker.selector);
+    }
     if (!interactionBlocker) {
       try {
-        disclosures = await runDisclosureChecks(page);
+        disclosures = await dependencies.runDisclosureChecks(page);
+        recordOutcome('disclosures', { status: 'completed', observationCount: disclosures.length });
       } catch (error) {
-        errors.push(`Disclosure checks error: ${error instanceof Error ? error.message : String(error)}`);
+        const message = errorMessage(error);
+        errors.push(`Disclosure checks error: ${message}`);
+        recordOutcome('disclosures', { status: 'failed', observationCount: 0, error: message });
       }
     }
     for (const disclosure of disclosures.filter((item) => item.error)) {
@@ -563,23 +721,37 @@ async function auditViewport(
     }
     if (!interactionBlocker) {
       try {
-        tabs = await runTabChecks(page);
+        tabs = await dependencies.runTabChecks(page);
+        recordOutcome('tabs', { status: 'completed', observationCount: tabs.length });
       } catch (error) {
-        errors.push(`Tab checks error: ${error instanceof Error ? error.message : String(error)}`);
+        const message = errorMessage(error);
+        errors.push(`Tab checks error: ${message}`);
+        recordOutcome('tabs', { status: 'failed', observationCount: 0, error: message });
       }
     }
     try {
-      responsive = await runResponsiveChecks(page);
+      responsive = await dependencies.runResponsiveChecks(page);
+      const responsiveCompleted = responsive.completed !== false;
+      recordOutcome('responsive', {
+        status: responsiveCompleted ? 'completed' : 'failed',
+        observationCount: responsiveCompleted ? responsiveObservationCount(responsive) : 0,
+        ...(!responsiveCompleted ? { error: 'Responsive phases did not all complete.' } : {})
+      });
     } catch (error) {
-      errors.push(`Responsive checks error: ${error instanceof Error ? error.message : String(error)}`);
+      const message = errorMessage(error);
+      errors.push(`Responsive checks error: ${message}`);
+      recordOutcome('responsive', { status: 'failed', observationCount: 0, error: message });
     }
     if (!interactionBlocker && viewport.name === 'desktop') {
       try {
-        const linkOutput = await runLinkChecks(page, options.maxLinksPerPage);
+        const linkOutput = await dependencies.runLinkChecks(page, options.maxLinksPerPage);
         links = linkOutput.results;
         linkRun = linkOutput.metadata;
+        recordOutcome('links', linkRun.completed
+          ? { status: 'completed', observationCount: links.length }
+          : { status: 'failed', observationCount: 0, error: linkRun.error || 'Link checks did not complete.' });
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = errorMessage(error);
         errors.push(`Link checks error: ${message}`);
         linkRun = {
           completed: false,
@@ -589,6 +761,7 @@ async function auditViewport(
           scope: 'desktop-same-origin',
           error: message
         };
+        recordOutcome('links', { status: 'failed', observationCount: 0, error: message });
       }
     } else if (interactionBlocker && viewport.name === 'desktop') {
       linkRun = {
@@ -599,6 +772,29 @@ async function auditViewport(
         scope: 'blocked',
         error: `Link checks were blocked by ${interactionBlocker.selector}.`
       };
+    }
+    if (!interactionBlocker && options.journeys.length > 0) {
+      try {
+        const configuredJourneys = await dependencies.runConfiguredJourneyChecks(
+          page,
+          options.journeys,
+          url,
+          viewport.name,
+          async () => {
+            const journeyConsent = await dependencies.dismissConsentBanner(page);
+            if (journeyConsent.error) throw new Error(`Consent handling failed: ${journeyConsent.error}`);
+          }
+        );
+        keyboard.journeys.push(...configuredJourneys);
+        recordOutcome('journeys', { status: 'completed', observationCount: configuredJourneys.length });
+        await page.goto(finalUrl, { waitUntil: 'domcontentloaded' });
+        await page.waitForLoadState('networkidle', { timeout: Math.min(options.timeoutMs, 5_000) }).catch(() => undefined);
+        await dependencies.dismissConsentBanner(page);
+      } catch (error) {
+        const message = errorMessage(error);
+        errors.push(`Configured journey checks error: ${message}`);
+        recordOutcome('journeys', { status: 'failed', observationCount: 0, error: message });
+      }
     }
     if (signal?.aborted) throw new Error(CANCELLED_REASON);
     const preliminaryAudit: ViewportAudit = {
@@ -621,47 +817,77 @@ async function auditViewport(
       elementContexts: [],
       screenshot: '',
       elementScreenshots: [],
-      errors
+      errors,
+      collectionOutcomes
     };
     const allViewportFindings = findingsFromPage({ url, viewports: [preliminaryAudit] });
-    preliminaryAudit.elementContexts = await collectElementContexts(
-      page,
-      allViewportFindings.flatMap((finding) => finding.selectors)
-    );
+    try {
+      preliminaryAudit.elementContexts = await dependencies.collectElementContexts(
+        page,
+        allViewportFindings.flatMap((finding) => finding.selectors)
+      );
+      recordOutcome('element-context', {
+        status: 'completed',
+        observationCount: preliminaryAudit.elementContexts.length
+      });
+    } catch (error) {
+      const message = errorMessage(error);
+      errors.push(`Element context check error: ${message}`);
+      recordOutcome('element-context', { status: 'failed', observationCount: 0, error: message });
+    }
     const screenshotFindings = allViewportFindings
       .filter((finding) => finding.classification !== 'manual');
     if (options.captureScreenshots && screenshotFindings.length > 0) {
       await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => undefined);
       await page.waitForLoadState('networkidle', { timeout: Math.min(options.timeoutMs, 5_000) }).catch(() => undefined);
-      const captureConsent = await dismissConsentBanner(page);
-      const captureBlocker = await detectInteractionBlocker(page);
+      const captureConsent = await dependencies.dismissConsentBanner(page);
+      const captureBlocker = await dependencies.detectInteractionBlocker(page);
       const evidenceSurfaceClear = (!captureConsent.found || captureConsent.dismissed) && !captureBlocker;
-      if (!evidenceSurfaceClear) {
-        errors.push(`Component screenshot capture was blocked by a visible surface${captureBlocker ? `: ${captureBlocker.selector}` : '.'}`);
-        await mkdir(resolve(options.outputDir, 'screenshots'), { recursive: true });
-        await page.screenshot({ path: screenshot, fullPage: true, animations: 'disabled', caret: 'hide' });
-        preliminaryAudit.screenshot = screenshot;
-      } else {
-        await prepareEvidenceStates(page, screenshotFindings);
-        preliminaryAudit.elementScreenshots = await captureElementScreenshots(
-          page,
-          url,
-          viewport.name,
-          options.outputDir,
-          screenshotCandidatesForFindings(screenshotFindings),
-          preliminaryAudit.elementContexts
-        );
-        if (needsFullPageScreenshotFallback(screenshotFindings, preliminaryAudit.elementScreenshots)) {
-          await mkdir(resolve(options.outputDir, 'screenshots'), { recursive: true });
-          await page.screenshot({ path: screenshot, fullPage: true, animations: 'disabled', caret: 'hide' });
+      try {
+        if (!evidenceSurfaceClear) {
+          errors.push(`Component screenshot capture was blocked by a visible surface${captureBlocker ? `: ${captureBlocker.selector}` : '.'}`);
+          await dependencies.capturePageScreenshot(page, screenshot);
           preliminaryAudit.screenshot = screenshot;
+          recordOutcome('screenshots', {
+            status: 'blocked',
+            observationCount: 1,
+            blockedBy: captureBlocker?.selector || captureConsent.surfaceSelector || 'visible surface'
+          });
+        } else {
+          await prepareEvidenceStates(page, screenshotFindings);
+          preliminaryAudit.elementScreenshots = await dependencies.captureElementScreenshots(
+            page,
+            url,
+            viewport.name,
+            options.outputDir,
+            screenshotCandidatesForFindings(screenshotFindings),
+            preliminaryAudit.elementContexts
+          );
+          if (needsFullPageScreenshotFallback(screenshotFindings, preliminaryAudit.elementScreenshots)) {
+            await dependencies.capturePageScreenshot(page, screenshot);
+            preliminaryAudit.screenshot = screenshot;
+          }
+          recordOutcome('screenshots', {
+            status: 'completed',
+            observationCount: preliminaryAudit.elementScreenshots.length + (preliminaryAudit.screenshot ? 1 : 0)
+          });
         }
+      } catch (error) {
+        const message = errorMessage(error);
+        errors.push(`Screenshot check error: ${message}`);
+        recordOutcome('screenshots', { status: 'failed', observationCount: 0, error: message });
       }
+    } else if (options.captureScreenshots) {
+      recordOutcome('screenshots', { status: 'not-applicable', observationCount: 0 });
     }
+    preliminaryAudit.partial = isPartialAudit(errors, axeRun, interactionBlocker);
     return preliminaryAudit;
   } catch (error) {
     const cancelled = Boolean(signal?.aborted);
-    errors.push(cancelled ? CANCELLED_REASON : error instanceof Error ? error.message : String(error));
+    const message = cancelled ? CANCELLED_REASON : errorMessage(error);
+    errors.push(message);
+    recordOutcome('navigation', { status: 'failed', observationCount: 0, error: message }, true);
+    blockPending(checkIds.filter((checkId) => checkId !== 'navigation'), 'navigation');
     return {
       viewport,
       url,
@@ -683,6 +909,8 @@ async function auditViewport(
       screenshot: '',
       elementScreenshots: [],
       errors,
+      collectionOutcomes,
+      partial: true,
       ...(cancelled ? { cancelled: true } : {})
     };
   } finally {
@@ -722,7 +950,12 @@ async function auditPageBrowser(
       viewport: viewport.name
     });
   }
-  return { url, viewports };
+  return {
+    url,
+    viewports,
+    partial: viewports.length !== options.viewports.length
+      || viewports.some((viewport) => viewport.cancelled || viewport.partial)
+  };
 }
 
 async function runPool<T, R>(
@@ -808,7 +1041,18 @@ export async function runAudit(
     }
   }
 
-  const findings = consolidateFindings(pages.flatMap(findingsFromPage));
+  // Contract pipeline: collect raw observations -> validate completeness -> classify ->
+  // consolidate without evidence loss -> build the criterion ledger -> validate the
+  // canonical JSON model -> render downstream formats.
+  assertCollectionCompleteness(pages);
+  const classifiedFindings = pages.flatMap(findingsFromPage);
+  const gatedFindings = applyConfirmedFindingConfidenceGate(classifiedFindings);
+  const consolidatedFindings = consolidateFindings(gatedFindings);
+  assertLosslessConsolidation(gatedFindings, consolidatedFindings);
+  const findings = assignFindingIds(consolidatedFindings).map((finding) => ({
+    ...finding,
+    standards: standardsForFinding(finding)
+  }));
   retainRepresentativeScreenshotPerFinding(findings);
   assertRemediationOnlyNotes(findings);
   const startedUrls = new Set(pages.map((page) => page.url));
@@ -817,6 +1061,7 @@ export async function runAudit(
     : [];
   const cancelled = Boolean(execution.signal?.aborted);
   const generatedAt = new Date().toISOString();
+  const aaaAdvisory = Boolean(options.aaaAdvisory || options.wcagLevel === 'AAA');
   const summary: AuditSummary = {
     status: cancelled ? 'cancelled' : 'completed',
     ...(cancelled ? { cancelledAt: generatedAt } : {}),
@@ -824,6 +1069,11 @@ export async function runAudit(
     auditor: options.auditor,
     source,
     wcagLevel: options.wcagLevel,
+    conformanceTarget: 'AA',
+    aaaAdvisory,
+    humanAssessmentRequired: true,
+    conformanceDecision: 'not-determined',
+    qualityContract: { ...AUDIT_QUALITY_CONTRACT },
     landingPageUrl: options.landingPageUrl ?? urls[0] ?? '',
     requestedUrls: urls,
     auditedUrls: pages.filter((page) => page.viewports.some((viewport) =>
@@ -836,17 +1086,21 @@ export async function runAudit(
     pages,
     findings,
     coverage: buildCoverageMatrix(pages, findings),
+    criteria: buildWcagCriterionLedger(pages, findings, REQUIRED_MANUAL_CHECKS, aaaAdvisory),
     manualChecks: REQUIRED_MANUAL_CHECKS,
     limitations: [
       'This output is an evidence-backed test result, not a WCAG conformance certification.',
       'Automated checks cannot establish content meaning, complete contrast over imagery, correct reading order in every assistive technology, or all WCAG exceptions.',
       ...(cancelled ? [CANCELLED_REASON] : []),
-      'Screen-reader, physical-device, content-meaning, and judgment-based WCAG checks remain guided manual work.'
+      'Native screen-reader workflow evidence supplements this report when run, but screen-reader, physical-device, content-meaning, and judgment-based WCAG checks still require qualified human assessment.',
+      'A qualified reviewer must decide applicability and sign off every WCAG 2.2 A and AA criterion before this evidence can support a conformance claim.'
     ]
   };
+  assertCanonicalAuditSummary(summary);
+  assertAuditQualityContract(summary);
   await pruneUnreferencedScreenshots(summary, options.outputDir);
   const jsonPath = resolve(options.outputDir, 'audit-results.json');
-  await writeFile(jsonPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+  await writeJsonReport(summary, jsonPath);
   await emitProgress(execution, {
     phase: cancelled ? 'cancelled' : 'reporting',
     message: cancelled

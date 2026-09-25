@@ -60,4 +60,28 @@ describe('collectUrls', () => {
     );
     expect(urlRestrictionReason('https://preview-42.example/page', { stagingOnly: true })).toBeNull();
   });
+
+  it('preserves distinct hash-routed application states', async () => {
+    await expect(collectUrls([
+      'https://example.test/app',
+      'https://example.test/app#special'
+    ])).resolves.toMatchObject({
+      urls: [
+        'https://example.test/app',
+        'https://example.test/app#special'
+      ]
+    });
+  });
+
+  it('expands whitespace-collapsed URL lists instead of encoding them as one path', async () => {
+    const result = await collectUrls([
+      'https://loreal.runmytests.eu/en  https://loreal.runmytests.eu/en/search-jobs https://loreal.runmytests.eu/en/saved-jobs'
+    ]);
+
+    expect(result.urls).toEqual([
+      'https://loreal.runmytests.eu/en',
+      'https://loreal.runmytests.eu/en/search-jobs',
+      'https://loreal.runmytests.eu/en/saved-jobs'
+    ]);
+  });
 });

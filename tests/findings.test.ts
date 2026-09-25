@@ -25,8 +25,15 @@ function viewport(overrides: Partial<ViewportAudit> = {}): ViewportAudit {
       tablesForReview: [],
       autoplayMedia: []
     },
-    keyboard: { sequence: [], completedCycle: false, truncated: false, scope: 'unknown' },
-    responsive: { horizontalOverflow: 0, overflowElements: [], textSpacingOverflow: 0 },
+    keyboard: { sequence: [], journeys: [], completedCycle: false, truncated: false, scope: 'unknown' },
+    responsive: {
+      horizontalOverflow: 0,
+      overflowElements: [],
+      textSpacingOverflow: 0,
+      clippedElements: [],
+      overlapPairs: [],
+      lostInteractiveElements: []
+    },
     disclosures: [],
     tabs: [],
     links: [],
@@ -107,6 +114,30 @@ describe('evidence-gated link and tab findings', () => {
       selectors: ['#first', '#second']
     }));
     expect(contrast[0]?.issue).not.toContain('font weight');
+  });
+
+  it('keeps contrast output in review when rendered colours and ratios are incomplete', () => {
+    const findings = findingsFromPage(page(viewport({
+      axe: [{
+        id: 'color-contrast',
+        impact: 'serious',
+        tags: ['wcag2aa', 'wcag143'],
+        description: 'Ensure text has sufficient contrast',
+        help: 'Elements must meet contrast thresholds',
+        helpUrl: 'https://dequeuniversity.com/rules/axe/4.13/color-contrast',
+        nodes: [{
+          html: '<p class="muted">Help text</p>',
+          target: ['.muted'],
+          failureSummary: 'Fix the contrast of this element'
+        }]
+      }]
+    })));
+    expect(findings).toContainEqual(expect.objectContaining({
+      ruleId: 'axe-color-contrast',
+      classification: 'review',
+      severity: 'Advisory',
+      effort: 'Review'
+    }));
   });
 
   it('groups repeated disclosure relationship reviews by component family and does not require Escape', () => {
@@ -395,10 +426,33 @@ describe('evidence-gated link and tab findings', () => {
       },
       keyboard: {
         sequence: [],
+        journeys: [],
         completedCycle: false,
         truncated: false,
         scope: 'modal-only',
         modalSelector: '#privacy-dialog'
+      },
+      responsive: {
+        horizontalOverflow: 0,
+        overflowElements: [],
+        textSpacingOverflow: 0,
+        clippedElements: [{
+          selector: '#hidden-behind-dialog',
+          axis: 'horizontal',
+          phase: 'default',
+          clientWidth: 10,
+          clientHeight: 10,
+          scrollWidth: 100,
+          scrollHeight: 10
+        }],
+        overlapPairs: [{
+          firstSelector: '#hidden-behind-dialog',
+          secondSelector: '#privacy-dialog',
+          phase: 'default',
+          overlapWidth: 20,
+          overlapHeight: 20
+        }],
+        lostInteractiveElements: []
       }
     })));
     expect(findings).toContainEqual(expect.objectContaining({
@@ -406,6 +460,198 @@ describe('evidence-gated link and tab findings', () => {
       classification: 'blocker',
       wcag: ['None']
     }));
+    expect(findings.some((finding) => finding.ruleId.startsWith('responsive-'))).toBe(false);
+  });
+
+  it('promotes repeat-confirmed clipping while keeping overlap as a review candidate', () => {
+    const findings = findingsFromPage(page(viewport({
+      responsive: {
+        horizontalOverflow: 0,
+        overflowElements: [],
+        textSpacingOverflow: 0,
+        clippedElements: [{
+          selector: '#genuinely-clipped-content',
+          axis: 'horizontal',
+          phase: 'default',
+          clientWidth: 120,
+          clientHeight: 40,
+          scrollWidth: 240,
+          scrollHeight: 40,
+          contentSelector: '#genuinely-clipped-content > span',
+          contentKind: 'text',
+          repeatConfirmed: true
+        }],
+        overlapPairs: [{
+          firstSelector: '#primary-action',
+          secondSelector: '#secondary-action',
+          phase: 'default',
+          overlapWidth: 24,
+          overlapHeight: 16
+        }],
+        lostInteractiveElements: []
+      }
+    })));
+    expect(findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        ruleId: 'responsive-content-clipped',
+        classification: 'confirmed',
+        severity: 'Moderate'
+      }),
+      expect.objectContaining({
+        ruleId: 'responsive-controls-overlap',
+        classification: 'review',
+        severity: 'Moderate'
+      })
+    ]));
+  });
+
+  it('keeps stress-phase overflow as evidence unless functionality is repeat-confirmed lost', () => {
+    const findings = findingsFromPage(page(viewport({
+      responsive: {
+        horizontalOverflow: 0,
+        overflowElements: [],
+        textSpacingOverflow: 420,
+        textResizeOverflow: 480,
+        clippedElements: [
+          {
+            selector: '#resize-carousel',
+            axis: 'horizontal',
+            phase: 'text-resize-200',
+            clientWidth: 320,
+            clientHeight: 80,
+            scrollWidth: 800,
+            scrollHeight: 80,
+            contentSelector: '#resize-carousel .slide',
+            contentKind: 'text',
+            repeatConfirmed: true
+          },
+          {
+            selector: '#spacing-carousel',
+            axis: 'horizontal',
+            phase: 'text-spacing',
+            clientWidth: 320,
+            clientHeight: 80,
+            scrollWidth: 800,
+            scrollHeight: 80,
+            contentSelector: '#spacing-carousel .slide',
+            contentKind: 'text',
+            repeatConfirmed: true
+          }
+        ],
+        overlapPairs: [],
+        lostInteractiveElements: [],
+        textResizeLostInteractiveElements: []
+      }
+    })));
+
+    expect(findings.some((finding) => [
+      'text-spacing-overflow',
+      'text-resize-200-overflow',
+      'responsive-content-clipped'
+    ].includes(finding.ruleId))).toBe(false);
+  });
+
+  it('promotes only repeat-confirmed focus and reflow losses and high-confidence data tables', () => {
+    const audit = viewport();
+    audit.keyboard = {
+      completedCycle: false,
+      truncated: false,
+      scope: 'document',
+      journeys: [],
+      sequence: [{
+        index: 3,
+        selector: '#cloned-slide-link',
+        componentSelector: '#carousel',
+        role: 'a',
+        name: 'Hidden clone',
+        visibleIndicator: true,
+        obscured: false,
+        outsideViewport: true,
+        outsideViewportConfirmed: true
+      }]
+    };
+    audit.responsive = {
+      horizontalOverflow: 0,
+      overflowElements: [],
+      textSpacingOverflow: 0,
+      clippedElements: [],
+      overlapPairs: [],
+      lostInteractiveElements: [{ selector: '#spacing-action', name: 'Spacing action', repeatConfirmed: true }],
+      textResizeLostInteractiveElements: [{ selector: '#home-link', name: 'Home', repeatConfirmed: true }]
+    };
+    audit.dom.tablesForReview = [{
+      selector: '#entities',
+      reason: 'A visible 157-row by 3-column data table has no header cells.',
+      classification: 'confirmed',
+      rowCount: 157,
+      columnCount: 3
+    }];
+
+    const findings = findingsFromPage(page(audit));
+    expect(findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ruleId: 'keyboard-focus-outside-viewport', classification: 'confirmed' }),
+      expect.objectContaining({
+        ruleId: 'text-spacing-functionality-lost',
+        classification: 'confirmed',
+        component: '#spacing-action',
+        sharedComponentKey: expect.any(String)
+      }),
+      expect.objectContaining({
+        ruleId: 'text-resize-functionality-lost',
+        classification: 'confirmed',
+        component: '#home-link',
+        sharedComponentKey: expect.any(String)
+      }),
+      expect.objectContaining({ ruleId: 'table-missing-headers', classification: 'confirmed' })
+    ]));
+  });
+
+  it('deduplicates responsive overlap candidates by obscured root cause while preserving occluders', () => {
+    const findings = findingsFromPage(page(viewport({
+      responsive: {
+        horizontalOverflow: 0,
+        overflowElements: [],
+        textSpacingOverflow: 0,
+        clippedElements: [],
+        overlapPairs: [
+          {
+            firstSelector: '#submit',
+            secondSelector: '#sticky-one',
+            phase: 'default',
+            overlapWidth: 40,
+            overlapHeight: 20,
+            overlapArea: 800,
+            smallerElementOverlapPercent: 80,
+            obscuredElementOverlapPercent: 80,
+            obscuredSelector: '#submit',
+            occludingSelector: '#sticky-one',
+            hitTestSampleCount: 3
+          },
+          {
+            firstSelector: '#submit',
+            secondSelector: '#sticky-two',
+            phase: 'default',
+            overlapWidth: 30,
+            overlapHeight: 20,
+            overlapArea: 600,
+            smallerElementOverlapPercent: 60,
+            obscuredElementOverlapPercent: 60,
+            obscuredSelector: '#submit',
+            occludingSelector: '#sticky-two',
+            hitTestSampleCount: 3
+          }
+        ],
+        lostInteractiveElements: []
+      }
+    })));
+    const overlaps = findings.filter((finding) => finding.ruleId === 'responsive-controls-overlap');
+    expect(overlaps).toHaveLength(1);
+    expect(overlaps[0]).toEqual(expect.objectContaining({
+      classification: 'review',
+      component: '#submit',
+      selectors: ['#submit', '#sticky-one', '#sticky-two']
+    }));
+    expect(overlaps[0]?.evidence).toHaveLength(2);
   });
 
   it('does not flag an organisation-named logo link solely because it points home', () => {
@@ -678,6 +924,7 @@ describe('evidence-gated link and tab findings', () => {
         completedCycle: true,
         truncated: false,
         scope: 'document',
+        journeys: [],
         sequence: [
           {
             index: 1,
@@ -686,7 +933,8 @@ describe('evidence-gated link and tab findings', () => {
             role: 'button',
             name: 'Filter one',
             visibleIndicator: false,
-            obscured: false
+            obscured: false,
+            outsideViewport: false
           },
           {
             index: 2,
@@ -695,7 +943,8 @@ describe('evidence-gated link and tab findings', () => {
             role: 'button',
             name: 'Filter two',
             visibleIndicator: false,
-            obscured: false
+            obscured: false,
+            outsideViewport: false
           },
           {
             index: 3,
@@ -704,7 +953,8 @@ describe('evidence-gated link and tab findings', () => {
             role: 'combobox',
             name: 'Sort jobs',
             visibleIndicator: false,
-            obscured: false
+            obscured: false,
+            outsideViewport: false
           }
         ]
       }
@@ -745,6 +995,41 @@ describe('evidence-gated link and tab findings', () => {
     expect(findings.filter((finding) => finding.ruleId === 'axe-aria-command-name')).toHaveLength(1);
     expect(findings.some((finding) => finding.ruleId === 'link-empty-accessible-name')).toBe(false);
     expect(findings.some((finding) => finding.ruleId === 'interactive-control-no-name')).toBe(false);
+  });
+
+  it('explains when responsive CSS hides the only link-name source', () => {
+    const html = '<a class="callout" href="/location"><span class="callout__fake-button">Explore this location</span></a>';
+    const findings = findingsFromPage(page(viewport({
+      axe: [{
+        id: 'link-name',
+        impact: 'serious',
+        tags: ['wcag2a', 'wcag244', 'wcag412'],
+        description: 'Ensure links have discernible text',
+        help: 'Links must have discernible text',
+        helpUrl: 'https://dequeuniversity.com/rules/axe/4.13/link-name',
+        nodes: [{ html, target: ['.callout'] }]
+      }],
+      dom: {
+        ...viewport().dom,
+        emptyLinks: [{
+          selector: 'a.callout',
+          html,
+          href: '/location',
+          sourceText: 'Explore this location',
+          excludedNameSources: [{
+            selector: 'span.callout__fake-button',
+            text: 'Explore this location',
+            reason: 'display:none'
+          }]
+        }]
+      }
+    })));
+
+    const finding = findings.find((item) => item.ruleId === 'axe-link-name');
+    expect(finding?.issue).toContain('Explore this location');
+    expect(finding?.issue).toContain('display:none');
+    expect(finding?.evidence[0]?.detail).toContain('display:none');
+    expect(finding?.remediation).toContain('responsive breakpoint');
   });
 
   it('groups repeated axe nodes from the same rendered component and root cause', () => {

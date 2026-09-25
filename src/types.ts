@@ -39,6 +39,41 @@ export interface EvidenceItem {
   selector?: string;
   detail: string;
   screenshot?: string;
+  /** Machine-verifiable lineage from the retained report row back to one observation. */
+  provenance?: EvidenceProvenance;
+}
+
+export type AuditCheckId =
+  | 'navigation'
+  | 'axe'
+  | 'dom'
+  | 'keyboard'
+  | 'disclosures'
+  | 'tabs'
+  | 'responsive'
+  | 'links'
+  | 'journeys'
+  | 'element-context'
+  | 'screenshots';
+
+export type CollectionStatus = 'completed' | 'failed' | 'blocked' | 'not-applicable' | 'not-run';
+
+export interface CollectionOutcome {
+  checkId: AuditCheckId;
+  status: CollectionStatus;
+  observationCount: number;
+  error?: string;
+  blockedBy?: string;
+}
+
+export interface EvidenceProvenance {
+  observationId: string;
+  checkId: AuditCheckId;
+  ruleId: string;
+  state: string;
+  target: string;
+  observed: string;
+  expected: string;
 }
 
 export interface ElementContext {
@@ -63,11 +98,15 @@ export interface ConsentHandlingResult {
 }
 
 export interface Finding {
+  /** Stable report identity shared by JSON, HTML, XLSX, and WCAG criterion links. */
+  id?: string;
   key: string;
   ruleId: string;
   classification: FindingClassification;
   severity: Severity;
   wcag: string[];
+  /** Explicit report mappings derived after consolidation; never used to infer conformance. */
+  standards?: string[];
   summary: string;
   issue: string;
   impact: string;
@@ -140,7 +179,15 @@ export interface DomCheckResult {
   unnamedLandmarks: Array<{ selector: string; role: string }>;
   missingAltImages: Array<{ selector: string; html: string }>;
   linkedImagesForReview: Array<{ selector: string; name: string; alt: string; href: string; reason: string }>;
-  emptyLinks: Array<{ selector: string; html: string; href: string }>;
+  emptyLinks: Array<{
+    selector: string;
+    html: string;
+    href: string;
+    /** Raw source text, which can differ from the rendered/accessibility-tree name. */
+    sourceText?: string;
+    /** Text sources excluded from accessible-name computation and the reason each is excluded. */
+    excludedNameSources?: Array<{ selector: string; text: string; reason: string }>;
+  }>;
   emptyNamedControls: Array<{ selector: string; tag: string; html: string }>;
   unlabeledFields: Array<{ selector: string; html: string }>;
   duplicateIds: Array<{ id: string; count: number }>;
@@ -163,7 +210,13 @@ export interface DomCheckResult {
       centerDistance: number;
     }>;
   }>;
-  tablesForReview: Array<{ selector: string; reason: string }>;
+  tablesForReview: Array<{
+    selector: string;
+    reason: string;
+    classification?: FindingClassification;
+    rowCount?: number;
+    columnCount?: number;
+  }>;
   autoplayMedia: Array<{ selector: string; tag: string }>;
 }
 
@@ -175,6 +228,9 @@ export interface KeyboardCheckResult {
     role: string;
     visibleIndicator: boolean;
     obscured: boolean;
+    outsideViewport: boolean;
+    /** A second settled sample found the same focused element fully outside the viewport. */
+    outsideViewportConfirmed?: boolean;
     componentSelector?: string;
     modalSelector?: string;
     }>;
@@ -183,12 +239,118 @@ export interface KeyboardCheckResult {
   truncated: boolean;
   scope: 'document' | 'modal-only' | 'unknown';
   modalSelector?: string;
+  journeys: KeyboardJourneyResult[];
+}
+
+export type AuditJourneyCategory = 'keyboard' | 'forms' | 'interaction' | 'dynamic-content';
+
+export type AuditJourneyStep =
+  | { action: 'focus'; selector: string }
+  | { action: 'press'; key: string; selector?: string }
+  | { action: 'type'; selector: string; text: string }
+  | { action: 'wait'; milliseconds: number }
+  | {
+      action: 'assert';
+      expectation:
+        | 'focused'
+        | 'visible'
+        | 'hidden'
+        | 'expanded'
+        | 'collapsed'
+        | 'pressed'
+        | 'unpressed'
+        | 'selected'
+        | 'checked'
+        | 'unchecked'
+        | 'invalid'
+        | 'valid'
+        | 'url-contains'
+        | 'text-contains'
+        | 'value-equals'
+        | 'live-region-updated';
+      selector?: string;
+      value?: string;
+      timeoutMs?: number;
+    };
+
+/** A repeatable, site-specific keyboard task executed against matching pages and viewports. */
+export interface AuditJourneyDefinition {
+  id: string;
+  title: string;
+  categories: AuditJourneyCategory[];
+  /** A case-sensitive substring of the requested URL. Omit to run on every requested page. */
+  urlIncludes?: string;
+  /** Viewport names on which to run the journey. Omit to run on every configured viewport. */
+  viewports?: string[];
+  steps: AuditJourneyStep[];
+}
+
+export interface KeyboardJourneyResult {
+  id: string;
+  title: string;
+  status: 'passed' | 'failed' | 'not-applicable' | 'inconclusive';
+  steps: string[];
+  detail: string;
+  source?: 'built-in' | 'configured';
+  categories?: AuditJourneyCategory[];
+  assertionCount?: number;
+  selectors?: string[];
+  stepResults?: JourneyStepResult[];
+  failureStep?: number;
+}
+
+export interface JourneyStepResult {
+  index: number;
+  action: AuditJourneyStep['action'];
+  status: 'passed' | 'failed' | 'inconclusive' | 'not-run';
+  target: string;
+  expected: string;
+  observed: string;
 }
 
 export interface ResponsiveCheckResult {
+  /** True only after the default, 200% text-resize, and WCAG text-spacing phases all completed. */
+  completed?: boolean;
   horizontalOverflow: number;
   overflowElements: Array<{ selector: string; right: number; width: number }>;
   textSpacingOverflow: number;
+  /** Root-font 200% stress-test overflow. This is evidence, not a substitute for browser zoom review. */
+  textResizeOverflow?: number;
+  clippedElements: Array<{
+    selector: string;
+    axis: 'horizontal' | 'vertical' | 'both';
+    phase: 'default' | 'text-resize-200' | 'text-spacing';
+    clientWidth: number;
+    clientHeight: number;
+    scrollWidth: number;
+    scrollHeight: number;
+    /** The descendant or text-bearing node observed outside the clipping boundary. */
+    contentSelector?: string;
+    contentKind?: 'text' | 'interactive' | 'image' | 'media' | 'labelled';
+    /** The same clipping geometry was present in two settled samples. */
+    repeatConfirmed?: boolean;
+  }>;
+  overlapPairs: Array<{
+    firstSelector: string;
+    secondSelector: string;
+    phase: 'default' | 'text-resize-200' | 'text-spacing';
+    overlapWidth: number;
+    overlapHeight: number;
+    /** Intersection area after clipping the candidate pair to the viewport. */
+    overlapArea?: number;
+    /** Percentage of the smaller control covered by the intersection. */
+    smallerElementOverlapPercent?: number;
+    /** Percentage of the control underneath covered by the intersection. */
+    obscuredElementOverlapPercent?: number;
+    /** Control shown underneath the other control by hit-testing sampled overlap points. */
+    obscuredSelector?: string;
+    /** Control shown above the obscured control by hit-testing sampled overlap points. */
+    occludingSelector?: string;
+    /** Number of overlap points whose topmost interactive element identified the occluding control. */
+    hitTestSampleCount?: number;
+  }>;
+  lostInteractiveElements: Array<{ selector: string; name: string; repeatConfirmed?: boolean }>;
+  textResizeLostInteractiveElements?: Array<{ selector: string; name: string; repeatConfirmed?: boolean }>;
 }
 
 export interface DisclosureCheckResult {
@@ -216,6 +378,7 @@ export interface DisclosureCheckResult {
   beforeState?: DisclosureStateSnapshot;
   afterEnterState?: DisclosureStateSnapshot;
   afterSpaceState?: DisclosureStateSnapshot;
+  controlledFocusableCount?: number;
   firstTabSelector: string | null;
   tabEnteredControlledRegion: boolean | null;
   restorationError?: string;
@@ -350,20 +513,59 @@ export interface ViewportAudit {
   screenshot: string;
   elementScreenshots: ElementScreenshot[];
   errors: string[];
+  /** Explicit collector state; absent only in legacy/imported fixture data. */
+  collectionOutcomes?: CollectionOutcome[];
   cancelled?: boolean;
+  partial?: boolean;
 }
 
 export interface PageAudit {
   url: string;
   viewports: ViewportAudit[];
+  partial?: boolean;
 }
 
 export interface ManualCheck {
   id: string;
+  classification: 'manual';
   title: string;
   wcag: string[];
   procedure: string;
   applicableTo: string;
+  expectedEvidence?: string;
+}
+
+export type WcagCriterionStatus = 'passed' | 'failed' | 'manual-review-required' | 'not-applicable' | 'inconclusive';
+
+export interface WcagCriterionAssessment {
+  criterion: string;
+  level: 'A' | 'AA' | 'AAA';
+  title: string;
+  understandingUrl: string;
+  scope: 'standard' | 'advisory';
+  status: WcagCriterionStatus;
+  findingIds: string[];
+  automatedEvidence: string[];
+  detail: string;
+}
+
+export interface AuditQualityContractMetadata {
+  version: string;
+  standard: 'WCAG 2.2';
+  conformanceTarget: 'A/AA';
+  criterionCount: 55;
+  findingPolicy: 'evidence-gated';
+  guarantees?: Array<'failure-isolation' | 'traceable-evidence' | 'lossless-deduplication' | 'deterministic-output'>;
+}
+
+export interface RegressionSummary {
+  kind: 'software-quality-regression';
+  conformanceEvidence: false;
+  fixtureCount: number;
+  expectedFindingCount: number;
+  exactMatch: boolean;
+  deterministic: boolean;
+  generatedBy: string;
 }
 
 export interface AuditSummary {
@@ -373,12 +575,19 @@ export interface AuditSummary {
   auditor: string;
   source: string;
   wcagLevel: WcagConformanceLevel;
+  conformanceTarget?: 'AA';
+  aaaAdvisory?: boolean;
+  humanAssessmentRequired?: boolean;
+  conformanceDecision?: 'not-determined';
+  qualityContract?: AuditQualityContractMetadata;
+  regressionSummary?: RegressionSummary;
   landingPageUrl: string;
   requestedUrls: string[];
   auditedUrls: string[];
   skippedUrls: Array<{ url: string; reason: string }>;
   pages: PageAudit[];
   coverage: PageCoverage[];
+  criteria?: WcagCriterionAssessment[];
   findings: Finding[];
   manualChecks: ManualCheck[];
   limitations: string[];
@@ -387,6 +596,7 @@ export interface AuditSummary {
 export interface AuditOptions {
   auditor: string;
   wcagLevel: WcagConformanceLevel;
+  aaaAdvisory?: boolean;
   outputDir: string;
   landingPageUrl?: string;
   allowedHosts: string[];
@@ -401,4 +611,5 @@ export interface AuditOptions {
   concurrency: number;
   captureScreenshots: boolean;
   viewports: ViewportDefinition[];
+  journeys: AuditJourneyDefinition[];
 }

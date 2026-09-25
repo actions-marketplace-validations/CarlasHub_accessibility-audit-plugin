@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { extname, resolve } from 'node:path';
+import { basename, extname, resolve } from 'node:path';
 import ExcelJS from 'exceljs';
 
 export interface UrlCollection {
@@ -11,14 +11,23 @@ export interface UrlCollection {
 const urlPattern = /https?:\/\/[^\s<>'"\])}]+/gi;
 const stagingHostPattern = /(?:^|[.-])(?:dev|development|local|localhost|preview|qa|stage|staging|test|testing|uat)(?:[.\d-]|$)/i;
 
+export function splitUrlListValue(value: string): string[] {
+  return value
+    .trim()
+    .split(/\s+(?=https?:\/\/)/i)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function normalizeUrl(value: string): string | null {
   try {
-    const parsed = new URL(value.trim());
+    const trimmed = value.trim();
+    if (/\s/.test(trimmed)) return null;
+    const parsed = new URL(trimmed);
     if (!['http:', 'https:'].includes(parsed.protocol)) return null;
     if (parsed.username || parsed.password) {
       throw new Error('URLs containing embedded usernames or passwords are not supported.');
     }
-    parsed.hash = '';
     return parsed.toString();
   } catch (error) {
     if (error instanceof Error && error.message.includes('embedded usernames or passwords')) throw error;
@@ -120,6 +129,12 @@ export async function collectUrls(
   const sources: string[] = [];
 
   for (const input of inputs) {
+    const expandedInputs = splitUrlListValue(input);
+    if (expandedInputs.length > 1) {
+      found.push(...expandedInputs);
+      sources.push('command line');
+      continue;
+    }
     const direct = normalizeUrl(input);
     if (direct) {
       found.push(direct);
@@ -133,7 +148,7 @@ export async function collectUrls(
 
     const filePath = resolve(input);
     const extension = extname(filePath).toLowerCase();
-    sources.push(filePath);
+    sources.push(basename(filePath));
     if (extension === '.xlsx') {
       found.push(...(await urlsFromWorkbook(filePath)));
       continue;

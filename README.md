@@ -1,12 +1,22 @@
-# Accessibility Audit Plugin
+# CarlasHub Accessibility Audit
 
 [![Verify plugin](https://github.com/CarlasHub/accessibility-audit-plugin/actions/workflows/verify.yml/badge.svg)](https://github.com/CarlasHub/accessibility-audit-plugin/actions/workflows/verify.yml)
+[![Latest release](https://img.shields.io/github/v/release/CarlasHub/accessibility-audit-plugin?display_name=tag&sort=semver)](https://github.com/CarlasHub/accessibility-audit-plugin/releases/latest)
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-Use%20the%20Action-1f6feb?logo=github)](https://github.com/marketplace/actions/carlashub-accessibility-audit)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node.js 22+](https://img.shields.io/badge/Node.js-22%2B-339933.svg)](package.json)
 
-A free GitHub Action and isolated Codex, Claude Code, Cursor, GitHub Copilot CLI, and GitHub Copilot in VS Code plugin that helps teams find and document web accessibility barriers. Give it one or more page URLs—or a file containing URLs—and it runs repeatable checks in a headless browser, then produces a polished self-contained HTML report, an Excel workbook, detailed JSON evidence, and a portable ZIP.
+Find accessibility barriers before they reach users. CarlasHub Accessibility Audit is an **evidence-backed accessibility pre-audit** for GitHub Actions and supported AI coding assistants. It separates confirmed failures from review candidates and coverage blockers, accounts for all 55 WCAG 2.2 Level A and AA criteria, and exports accessible HTML, Excel, JSON, screenshots, and a portable evidence archive.
+
+Use the free [GitHub Marketplace Action](https://github.com/marketplace/actions/carlashub-accessibility-audit), or install the plugin for Codex, Claude Code, Claude Desktop, Cursor, GitHub Copilot CLI, or GitHub Copilot in VS Code.
 
 Maintained by CarlasHub and released under the MIT License.
+
+[Open the public installation and workflow builder](https://carlashub.github.io/accessibility-audit-plugin/) to use the GitHub Action or choose the verified installation path for Claude Desktop, Claude Code, Cursor, Codex CLI, and GitHub Copilot.
+
+The public builder keeps audit ownership with the user. Choose **Create a new repository** to open the prefilled GitHub template, or **Use an existing repository** to select an App-authorised repository and start its workflow. Every audit run, report, and GitHub Actions usage record stays in that user's account. The optional repository chooser exchanges a narrowly scoped GitHub App credential through a server-side connector, stores it behind an opaque one-hour session, and never exposes it to the page; it does not run audits or receive reports. The manual GitHub editor, workflow preview, and download remain available without connecting an account.
+
+The Action and plugin implementation remain public for Marketplace use and independent review. The editable landing-page and connector source are maintained separately in a private repository; only the compiled browser files are published to `site-dist` on public `main` and to the public `gh-pages` branch. Browser-delivered HTML, CSS, and JavaScript are necessarily inspectable by visitors, but the TypeScript source, tests, deployment workflow, and connector implementation are not published from this repository.
 
 The audit engine is site-independent. It contains no customer-specific hostnames, page assumptions, selectors, rules, or defaults. Every target URL is supplied at run time, and evidence from one audit is never reused in another. Customer sites used during development are external validation targets only and are not part of the plugin package.
 
@@ -14,62 +24,57 @@ You do not need to know WCAG terminology to run the plugin. Start with the workf
 
 > **Important:** this plugin is an automated testing aid, not a WCAG certification. A report with no automated findings does not prove that a page is accessible. Screen-reader, physical-device, content-meaning, visual-judgment, and other guided checks remain manual. W3C likewise states that no evaluation tool alone can determine whether a site meets accessibility standards.
 
+## WCAG 2.2 Level AA coverage
+
+Every new report accounts for all **55 active WCAG 2.2 Level A and Level AA success criteria**. Each criterion has its own human-verification procedure and evidence prompt in the HTML report and `Manual Checks` worksheet, alongside the criterion ledger and any automated evidence. A criterion is never marked as passed merely because automation found nothing, and the removed WCAG 4.1.1 criterion is not treated as active.
+
+This is complete criteria coverage, not automatic certification. The final verdict still requires a qualified reviewer to complete the applicable procedures across the agreed pages, states, responsive variations, processes, browsers, devices, and assistive technologies. The 31 Level AAA criteria remain optional advisory coverage.
+
+The audit protects review quality as well as coverage. It separates confirmed failures, review candidates, and coverage blockers; suppresses responsive evidence when a modal prevents a valid interaction test; ignores intentionally visually hidden assistive text in clipping checks; and consolidates repeated evidence across viewports and test states. The workbook uses severity and evidence-status colours for triage, but every status is also written as text so colour is never the only cue. The normative product promise, audit plumbing, acceptance tests, and release rules are defined in the [Audit Quality Contract](AUDIT_QUALITY_CONTRACT.md).
+
 ## GitHub Actions: start-to-results tutorial
 
-[![Start-to-results tutorial for auditing a different repository with GitHub Actions](https://raw.githubusercontent.com/CarlasHub/accessibility-audit-plugin/main/.github/media/a11y-test-cases-github-actions-tutorial-poster.png)](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.1/A11y_Test_Cases_GitHub_Actions_Tutorial.mp4)
+[![Start-to-results tutorial for auditing a different repository with GitHub Actions](https://raw.githubusercontent.com/CarlasHub/accessibility-audit-plugin/main/.github/media/a11y-test-cases-github-actions-tutorial-poster.png)](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.3.1/A11y_Test_Cases_GitHub_Actions_Tutorial.mp4)
 
-[Watch or download the complete captioned walkthrough](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.1/A11y_Test_Cases_GitHub_Actions_Tutorial.mp4). It starts in a separate repository, creates the workflow, runs it from the Actions tab, follows the job, downloads the artifact, and opens both report formats. You can also follow the [click-by-click written tutorial](docs/a11y-test-cases-github-actions-tutorial.md), read the [video transcript](docs/a11y-test-cases-github-actions-tutorial-transcript.md), inspect the [successful public run](https://github.com/CarlasHub/a11y-test-cases/actions/runs/34448319858), or download the permanent [HTML report](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.1/Accessibility_Audit_Report.html) and [Excel workbook](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.1/Accessibility_Audit_Report.xlsx).
+[Watch or download the complete captioned walkthrough](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.3.1/A11y_Test_Cases_GitHub_Actions_Tutorial.mp4). It starts in a separate repository, creates the workflow, runs it from the Actions tab, follows the job, downloads the artifact, and opens both report formats. You can also follow the [click-by-click written tutorial](docs/a11y-test-cases-github-actions-tutorial.md), read the [video transcript](docs/a11y-test-cases-github-actions-tutorial-transcript.md), inspect the [successful public run](https://github.com/CarlasHub/a11y-test-cases/actions/runs/34448319858), or download the permanent [HTML report](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.1/Accessibility_Audit_Report.html) and [Excel workbook](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.1/Accessibility_Audit_Report.xlsx).
 
-The demonstrated audit of [A11y Test Cases](https://carlashub.github.io/a11y-test-cases/) completed one page and produced 52 findings: 51 confirmed and 1 requiring review, plus 7 guided manual checks. No secret or paid marketplace installation is required for a public URL.
+The demonstrated audit of [A11y Test Cases](https://carlashub.github.io/a11y-test-cases/) completed one page and produced 52 findings: 51 confirmed and 1 requiring review, plus the 7 grouped manual checks used by that historical release. Current reports replace those groups with 55 criterion-specific checks. No secret or paid marketplace installation is required for a public URL.
 
-## Deeper BuggyLand benchmark
+## BuggyLand benchmark and current regression gate
 
 [![Captioned walkthrough of the CarlasHub Action auditing BuggyLand](https://raw.githubusercontent.com/CarlasHub/accessibility-audit-plugin/main/.github/media/buggyland-github-action-tutorial-poster.png)](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.0/BuggyLand_GitHub_Action_Tutorial.mp4)
 
-[Watch or download the complete captioned walkthrough](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.0/BuggyLand_GitHub_Action_Tutorial.mp4), inspect the [successful public run](https://github.com/CarlasHub/buggyland/actions/runs/34391886799), or read the [video transcript](docs/buggyland-github-action-tutorial-transcript.md). It starts with adding and running the workflow, then shows exactly where to download and open the HTML and Excel results.
+[Watch or download the complete captioned v1.2.0 walkthrough](https://github.com/CarlasHub/accessibility-audit-plugin/releases/download/v1.2.0/BuggyLand_GitHub_Action_Tutorial.mp4), inspect its [successful public run](https://github.com/CarlasHub/buggyland/actions/runs/34391886799), or read the [video transcript](docs/buggyland-github-action-tutorial-transcript.md). It starts with adding and running the workflow, then shows exactly where to download and open the HTML and Excel results.
 
-The two [BuggyLand](https://carlashub.github.io/buggyland/) pages declare 172 intentional failure fixtures across all 86 active WCAG 2.2 success criteria. The Action produced 70 consolidated machine results: 52 confirmed failures and 18 items for review, with zero execution errors. Those numbers should not match: automated rules inspect rendered behaviour, consolidate repeated evidence, and cannot decide every WCAG requirement. The [benchmark evidence guide](docs/buggyland-benchmark.md) provides the complete criteria matrix, fixture inventory, downloadable enhanced workbook, raw JSON, and manual verification plan.
+The two [BuggyLand](https://carlashub.github.io/buggyland/) pages declare 172 intentional failure fixtures across all 86 active WCAG 2.2 success criteria. The historical v1.2.0 walkthrough produced 70 consolidated machine results: 52 confirmed failures and 18 items for review, with zero execution errors. Those numbers should not match: automated rules inspect rendered behaviour, consolidate repeated evidence, and cannot decide every WCAG requirement. The [benchmark evidence guide](docs/buggyland-benchmark.md) provides the complete criteria matrix, fixture inventory, downloadable enhanced workbook, raw JSON, and manual verification plan.
+
+The v1.8.1 quality baseline audits four page and fragment states at desktop, mobile, and 320px reflow sizes, then repeats the complete run to detect unstable results. Its reviewed baseline is 68 consolidated records: 31 confirmed failures, 36 items for review, and 1 interaction blocker, plus all 55 A/AA criterion-specific checks. It also executes 42 site-specific journey instances across the unblocked page and viewport combinations: 12 pass and 30 deliberately expose broken form announcements, tabs, modal focus management, Escape handling, and toast announcements. Independent 200% text-resize and 320px reflow phases prevent one responsive check from being mistaken for the other. Two blocked `#special` states remain visibly partial for interaction coverage instead of being reported as passes, while all three non-interactive responsive phases still test their rendered modal states. The exact machine-result baseline is enforced by the [regression fixture](tests/fixtures/buggyland-regression.json) and the [scheduled public workflow](.github/workflows/buggyland-regression.yml).
 
 For a client-neutral example, [watch the sanitised plugin demonstration](https://github.com/CarlasHub/accessibility-audit-plugin/blob/main/.github/media/accessibility-audit-demo.mp4) or read its [transcript](https://github.com/CarlasHub/accessibility-audit-plugin/blob/main/docs/accessibility-audit-demo-transcript.md).
 
 ## Use the free GitHub Action
 
-Add WCAG 2.2 evidence to a workflow without installing this repository as an editor plugin:
+Add this file as `.github/workflows/accessibility-audit.yml` in any GitHub project:
 
 ```yaml
 name: Accessibility audit
 
 on:
   workflow_dispatch:
-  pull_request:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  accessibility:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - id: audit
-        uses: CarlasHub/accessibility-audit-plugin@v1
-        with:
-          urls: |
-            https://preview.example.test/
-            https://preview.example.test/contact
-          allowed-hosts: preview.example.test
-          fail-on: serious
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload audit evidence
-        if: always() && steps.audit.outputs.output-dir != ''
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: accessibility-audit
-          path: ${{ steps.audit.outputs.output-dir }}
+  audit:
+    uses: CarlasHub/accessibility-audit-plugin/.github/workflows/reusable-accessibility-audit.yml@v1
+    with:
+      urls: |-
+        https://example.com/
+        https://example.com/contact
 ```
 
-The Action tests only the URLs you list. It posts or updates one pull-request summary when permitted and retains HTML, Excel, JSON, screenshots, and a portable ZIP for upload. `fail-on: none` is the informational default; severity gates count confirmed findings only, never items awaiting human review. See [GitHub Action usage](docs/github-action.md) for every input, output, permission, and security recommendation.
+List every page under `urls`, one per line, then open **Actions → Accessibility audit → Run workflow** and start the run. The run summary links directly to the HTML, Excel, JSON, screenshots, and ZIP report. No checkout, browser setup, artifact step, token, or hostname field is required. The Action tests only the URLs in the workflow and does not crawl the rest of the site. See [GitHub Action usage](docs/github-action.md) for advanced inputs, pull-request comments, quality gates, and security recommendations.
 
 ## Start here
 
@@ -122,9 +127,9 @@ Every supplied page is checked at desktop (1440×1000), mobile (390×844), and 3
 
 - images, links, buttons, and form fields that do not have usable names;
 - incorrect page structure or broken relationships between controls and content;
-- keyboard focus that is unreachable, out of order, invisible, or fully covered;
-- menus, disclosures, and tabs whose state or keyboard operation is broken;
-- content that overflows at narrow widths or after WCAG text-spacing overrides;
+- keyboard focus that is unreachable, out of order, outside the viewport, invisible, or fully covered, including forward/reverse order and bypass-block journeys;
+- menus, disclosures, and tabs whose state or keyboard operation is broken, plus configured site-specific keyboard, form, interaction, and live-region task journeys;
+- content that overflows, clips, overlaps, disappears, or loses focus visibility/functionality at narrow widths, at 200% root-text size, or after WCAG text-spacing overrides;
 - same-site links that are empty, placeholders, missing fragments, or consistently return 404/410;
 - target-size spacing conflicts, plus selected table, media, and responsive-layout signals that require review.
 
@@ -143,6 +148,8 @@ The report separates four evidence categories:
 
 Every populated finding starts with `Status = Open` so teams can triage it without implying a final compliance verdict. Use `Evidence type` to distinguish confirmed, review, blocker, and manual records, then follow `Test method` before assigning work.
 
+WCAG 2.2 Level AA is always the public conformance target. Optional AAA automation is advisory only. The HTML report, workbook, and JSON include a criterion-by-criterion ledger using `passed`, `failed`, `manual-review-required`, `not-applicable`, and `inconclusive`; a criterion is never inferred to pass merely because no automated issue was found. Findings also identify their W3C WCAG mapping, Deque axe-core rule source where applicable, and only the WCAG 2.0 A/AA criteria incorporated by [Revised Section 508 E205.4](https://www.access-board.gov/ict/#E205.4). The overall conformance decision remains **not determined** until qualified human assessment is complete.
+
 Severity (`Critical`, `Serious`, `Moderate`, or `Minor`) describes expected user impact. It is different from WCAG level, evidence confidence, remediation effort, and delivery priority.
 
 See [Understanding the report](docs/reporting.md) for a worksheet and column guide, and [Manual verification](docs/manual-verification.md) for checks that remain outstanding.
@@ -153,10 +160,11 @@ See [Understanding the report](docs/reporting.md) for a worksheet and column gui
 - Automatic one-time installation of headless Playwright Chromium when no supported browser is available; runtime and browser files stay in plugin-owned storage.
 - axe-core WCAG 2.2 A/AA rules plus selected best-practice signals, which remain review items when no WCAG success criterion is mapped.
 - DOM and semantic checks for page structure, image alternatives, controls, fields, landmarks, duplicate ids, tables, and media.
-- Sequential keyboard traversal, focus visibility review, focus obscuration checks, and disclosure state/relationship interaction tests.
+- Deterministic forward/reverse keyboard journeys, bypass-block activation, focus visibility/viewport/obscuration checks, and disclosure state/relationship interaction tests.
+- Configurable, repeatable task journeys for project-specific keyboard operation, forms, widget state, focus management, URL changes, and scoped live-region DOM updates.
 - Tab-component state, roving tabindex, arrow navigation, activation, and tab/panel relationship checks.
 - Conservative same-origin link validation for empty names, placeholders, missing fragments, confirmed 404/410 destinations, and server-error review signals.
-- Desktop, 390px mobile, and 320px reflow viewports.
+- Desktop, 390px mobile, and 320px reflow viewports with independent default, 200% root-text, and WCAG text-spacing states covering overflow, clipping, overlap, focus, and lost-functionality evidence.
 - Consent-banner detection and dismissal before interaction testing and evidence capture; reject or necessary-only actions are preferred.
 - At most one representative contextual component screenshot per final confirmed, blocker, or review reporting unit, with the affected element outlined inside its navigation, form, tablist, card, section, or other component boundary.
 - Full-page screenshots only for page-level failures or unresolved blocking surfaces; a failed component capture never falls back to unrelated full-page evidence.
@@ -167,6 +175,7 @@ See [Understanding the report](docs/reporting.md) for a worksheet and column gui
 - Embedded instructions, command, skill, rules, MCP server, workbook template, validation, CI checks, and generated marketplace payloads for Claude and GitHub Copilot.
 - A self-contained Node.js GitHub Action with job-summary, pull-request-comment, artifact, and conservative quality-gate support.
 - A per-page, per-viewport JSON coverage matrix that distinguishes confirmed pass/fail evidence from inconclusive, manual, not-tested, and not-applicable areas.
+- Optional native Guidepup workflows for macOS VoiceOver and Windows NVDA that publish bounded spoken-transcript evidence with browser, operating-system, and journey metadata.
 
 ## Requirements
 
@@ -175,7 +184,7 @@ See [Understanding the report](docs/reporting.md) for a worksheet and column gui
 - A Playwright-supported Chromium installation. If none is present, the plugin installs headless Playwright Chromium once after audit confirmation unless automatic installation is disabled.
 - Microsoft Excel or another OOXML-compatible reader for the generated workbook.
 
-No screen-reader package or operating-system accessibility permission is required.
+The core browser audit needs no screen-reader package or operating-system accessibility permission. Native screen-reader evidence is an optional, separate GitHub Actions workflow and does not replace manual assistive-technology testing.
 
 ## Install the plugin dependencies
 
@@ -200,7 +209,7 @@ For complete platform-specific setup, activation, verification, updating, uninst
 
 ## Cursor installation
 
-For local testing on macOS or Linux, Cursor discovers plugins under its local plugin directory. Symlink the built repository and reload Cursor:
+Download and extract the ready-made [agent plugin archive](https://github.com/CarlasHub/accessibility-audit-plugin/releases/latest/download/accessibility-audit-agent-plugin.tgz) in a permanent tools directory. For local installation on macOS or Linux, Cursor discovers plugins under its local plugin directory; point it at the extracted directory and reload Cursor:
 
 ```sh
 PLUGIN_DIR="$(pwd -P)"
@@ -210,19 +219,17 @@ ln -sfn "$PLUGIN_DIR" ~/.cursor/plugins/local/accessibility-audit
 
 Then run `Developer: Reload Window`, open **Customize**, and confirm that `accessibility-audit` exposes its command, skill, rule, and MCP server.
 
-On Windows PowerShell, clone directly into Cursor's local plugin directory:
+On Windows PowerShell, extract the ready-made archive directly into Cursor's local plugin directory:
 
 ```powershell
 $Destination = Join-Path $env:USERPROFILE ".cursor\plugins\local\accessibility-audit"
 New-Item -ItemType Directory -Force (Split-Path $Destination) | Out-Null
-git clone https://github.com/CarlasHub/accessibility-audit-plugin.git $Destination
-Set-Location $Destination
-npm ci
-npx playwright install chromium
-npm run build
+curl.exe -L -o accessibility-audit-agent-plugin.tgz https://github.com/CarlasHub/accessibility-audit-plugin/releases/latest/download/accessibility-audit-agent-plugin.tgz
+New-Item -ItemType Directory -Force $Destination | Out-Null
+tar.exe -xzf accessibility-audit-agent-plugin.tgz -C $Destination --strip-components=1
 ```
 
-After an installation is updated, run `npm ci`, `npm run build`, and reload Cursor.
+After an installation is updated, replace the extracted directory and reload Cursor. Contributors using a source checkout must run `npm ci` and `npm run build` after updating.
 
 Cursor can also load the root `mcp.json` when the repository is configured as a plugin. The manifest is [.cursor-plugin/plugin.json](.cursor-plugin/plugin.json).
 
@@ -230,7 +237,7 @@ Cursor Marketplace submission requires a public Git repository. A private reposi
 
 ## Claude Code installation
 
-Start Claude Code in the unrelated project while loading the separate built checkout:
+Download and extract the ready-made [agent plugin archive](https://github.com/CarlasHub/accessibility-audit-plugin/releases/latest/download/accessibility-audit-agent-plugin.tgz), then start Claude Code in the unrelated project while loading that separate plugin directory:
 
 ```sh
 cd /path/to/project-being-audited
@@ -251,14 +258,14 @@ Team-marketplace publication is a separate release workflow: users need access t
 
 ## Claude Desktop Chat installation
 
-Build the self-contained custom-plugin file:
+[Download the current Claude Desktop plugin ZIP](https://github.com/CarlasHub/accessibility-audit-plugin/releases/latest/download/accessibility-audit-claude-desktop.zip), or build the self-contained custom-plugin file locally:
 
 ```sh
 npm ci
 npm run package:claude-desktop
 ```
 
-The command validates the archive structure and writes `artifacts/accessibility-audit-claude-desktop-<version>.zip` plus its SHA-256 file. In Claude Desktop, open **Customize**, select **Plugins**, use the custom-plugin upload option, and choose that ZIP. The ZIP contains the skill and its local MCP runtime; do not unzip it before uploading.
+The command validates the archive structure and writes versioned and stable ZIP filenames plus their SHA-256 files. In Claude Desktop, open **Customize**, select **Plugins**, use the custom-plugin upload option, and choose the ZIP. The ZIP contains the skill and its local MCP runtime; do not unzip it before uploading.
 
 Open a new conversation in the **Chat** tab, type `/`, select **Run Accessibility Audit**, and provide one or more explicit URLs or a supported page-list file. The local MCP server requires Node.js 22 or later on the same computer. Organisation policy may prohibit custom plugins or local MCP servers. See [Installation](docs/installation.md#3c-install-in-claude-desktop-chat) for verification, updating, and removal.
 
@@ -266,10 +273,14 @@ Open a new conversation in the **Chat** tab, type `/`, select **Run Accessibilit
 
 The repository generates separate, marketplace-ready payloads for GitHub Copilot CLI and GitHub Copilot in VS Code. These payloads include compiled code, bundled production dependencies, skills, MCP configuration, and an isolated runtime launcher:
 
+- [Download the Copilot CLI package](https://github.com/CarlasHub/accessibility-audit-plugin/releases/latest/download/accessibility-audit-copilot-cli.zip) for direct local CLI installation.
+- [Download the Copilot VS Code marketplace package](https://github.com/CarlasHub/accessibility-audit-plugin/releases/latest/download/accessibility-audit-copilot-vscode.zip) for administrator-managed marketplace distribution. It is not a `.vsix` extension.
+
+Contributors can rebuild every release bundle locally:
+
 ```sh
 npm ci
-npm run build:marketplace
-npm run package:claude-desktop
+npm run package:release-bundles
 npm run validate:marketplace
 npm run test:marketplace
 ```
@@ -285,7 +296,7 @@ For team distribution, use the staged payload and catalog fragments documented i
 
 ## Codex installation
 
-The Codex manifest is [.codex-plugin/plugin.json](.codex-plugin/plugin.json), and the MCP server is declared in [.mcp.json](.mcp.json). Register the separate built checkout as a local marketplace, install it, and start a new session:
+Download and extract the ready-made [agent plugin archive](https://github.com/CarlasHub/accessibility-audit-plugin/releases/latest/download/accessibility-audit-agent-plugin.tgz). Its Codex manifest is [.codex-plugin/plugin.json](.codex-plugin/plugin.json), and its MCP server is declared in [.mcp.json](.mcp.json). Register the separate extracted directory as a local marketplace, install it, and start a new session:
 
 ```sh
 codex plugin marketplace add /path/to/accessibility-audit
@@ -293,7 +304,7 @@ codex plugin add accessibility-audit@accessibility-audit-marketplace
 codex plugin list
 ```
 
-In Codex CLI, enter `/plugins` to open the plugin browser. See [Installation](docs/installation.md#3c-install-in-codex) for activation, updating, and troubleshooting.
+In Codex CLI, enter `/plugins` to open the plugin browser. See [Installation](docs/installation.md#3d-install-in-codex) for activation, updating, and troubleshooting.
 
 The Codex IDE extension does not currently support plugins. Use Codex CLI or another supported Codex/ChatGPT plugin surface. See the [official OpenAI plugin documentation](https://developers.openai.com/codex/plugins).
 
@@ -394,12 +405,13 @@ Workbook worksheets:
 - `Findings` — a 25-field remediation register covering evidence confidence, workflow status, severity, WCAG mapping, affected scope, user impact, reproducible results, recommendation, ownership, effort, and screenshot evidence.
 - `Page Inventory` — every requested URL with audit state, planned and completed viewports, consent handling, runtime errors, and notes.
 - `Evidence` — portable evidence paths linked to their finding, page, viewport, rule, component, locator, evidence type, and detail.
-- `Manual Checks` — guided procedures, applicability, status, and reviewer notes for checks automation cannot complete.
+- `Manual Checks` — one row for each of the 55 active A/AA criteria, with a criterion-specific procedure, applicability, evidence prompt, status, and reviewer notes.
 - `WCAG 2.2 Reference` — visible criterion, level, title, and W3C Understanding links used to enrich findings.
+- `WCAG Criteria` — generated criterion-by-criterion AA and optional AAA-advisory status ledger with finding links, automated evidence, limitations, and W3C Understanding links.
 
-The report contains no screen-reader worksheet or screen-reader execution result.
+Native VoiceOver and NVDA runs publish separate JSON, Markdown, HTML, and Playwright artifacts so environment-specific spoken evidence is not confused with the core cross-platform report.
 
-The bundled workbook is an original CarlasHub template designed around WCAG 2.2 audit and remediation workflows. Its six sheets separate executive summary, findings, page coverage, evidence, guided manual checks, and standards reference while retaining portable links and validation controls.
+The bundled workbook is an original CarlasHub template designed around WCAG 2.2 audit and remediation workflows. Its six canonical template sheets separate executive summary, findings, page coverage, evidence, guided manual checks, and standards reference; the generator appends the seventh `WCAG Criteria` ledger while retaining portable links and validation controls.
 
 ## Finding confidence and false-positive controls
 
@@ -448,9 +460,24 @@ Pass `--config audit.config.json`. Command-line values override the file.
   "timeoutMs": 30000,
   "maxTabStops": 120,
   "maxLinksPerPage": 200,
-  "captureScreenshots": true
+  "captureScreenshots": true,
+  "journeys": [
+    {
+      "id": "open-primary-menu",
+      "title": "Open the primary menu with Enter",
+      "categories": ["keyboard", "interaction"],
+      "steps": [
+        { "action": "focus", "selector": "#menu-button" },
+        { "action": "press", "key": "Enter" },
+        { "action": "assert", "expectation": "expanded", "selector": "#menu-button" },
+        { "action": "assert", "expectation": "visible", "selector": "#primary-menu" }
+      ]
+    }
+  ]
 }
 ```
+
+Journeys restart from the requested URL and run at every applicable viewport. They may be limited with `urlIncludes` and `viewports`. Missing selectors are reported as inconclusive; reproduced assertion or keyboard-focus failures are confirmed. Use the complete [BuggyLand journey pack](examples/buggyland-journeys.json) as a working keyboard, form, modal, tabs, and live-region example. The GitHub Action also accepts the same array through `journeys` or a checked-in JSON file through `journeys-file`.
 
 Use `--headed` only when debugging. Normal and CI execution should remain headless.
 
@@ -469,12 +496,12 @@ The server also publishes the `run-accessibility-audit` MCP prompt.
 
 Automation cannot establish complete WCAG conformance. Manual work remains necessary for:
 
-- Supported screen-reader/browser combinations and dynamic announcements.
+- The user experience of supported screen-reader/browser combinations; a configured live-region journey proves only the observed DOM announcement contract.
 - Physical mobile devices, touch gestures, orientation, and drag alternatives.
 - Alternative-text meaning, captions, audio descriptions, language changes, and heading/label quality.
 - Complete contrast over gradients, images, and every component state.
 - Timing, flashing, cognitive consistency, error quality, accessible authentication, and exception analysis.
-- Complete keyboard journeys and application-specific workflows not safely submitted by automation.
+- Unconfigured, destructive, authentication-sensitive, or context-dependent keyboard journeys and application-specific workflows.
 
 Use `list_guided_manual_checks`, the workbook Overview, and [docs/manual-verification.md](docs/manual-verification.md) to complete those procedures.
 
@@ -497,6 +524,7 @@ See [SECURITY.md](SECURITY.md) for vulnerability reporting and data-handling not
 ```sh
 npm run lint
 npm run typecheck
+npm run test:quality-contract
 npm test
 npm run build
 npm run test:integration

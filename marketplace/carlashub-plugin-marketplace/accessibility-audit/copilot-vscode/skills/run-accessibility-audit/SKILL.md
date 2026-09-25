@@ -1,6 +1,6 @@
 ---
 name: run-accessibility-audit
-description: Run a headless evidence-backed WCAG 2.2 A/AA audit of explicit URLs or an XLSX/CSV/TXT/JSON page list and generate a validated Excel report with element screenshot evidence. Do not use to claim complete conformance from automation alone.
+description: Run a site-independent evidence-backed accessibility pre-audit for explicit WCAG 2.2 A/AA page scope, preserve complete or partial evidence, and export review-ready HTML, Excel, JSON, screenshots, and a portable archive.
 ---
 
 # Run Accessibility Audit
@@ -28,6 +28,6 @@ Call `run_accessibility_audit` once with the supplied targets. Read [test-matrix
 - Do not call the result a certification or complete WCAG conformance verdict.
 - Do not present an axe pass or absence of an automated signal as proof of accessibility.
 - Notes contain specific remediation only and no workflow or ticket commentary.
-- Preserve the six-sheet CarlasHub WCAG workbook structure, worksheet order, fields, formulas, validations, and styles. Do not add or rename workbook fields, columns, or worksheets during a run.
-- Page Inventory includes every requested URL and its audit state. Evidence contains portable relative screenshot hyperlinks with finding and test context. Component evidence is cropped around the component and target; full-page evidence is reserved for page-level failures or blockers without a component locator. Audit images are not embedded and no screen-reader results worksheet is created.
+- Preserve the seven-sheet CarlasHub WCAG workbook structure, worksheet order, fields, formulas, validations, and styles. The seventh sheet is the generated WCAG Criteria ledger; do not add or rename workbook fields, columns, or worksheets during a run.
+- Page Inventory includes every requested URL and its audit state. Evidence contains portable relative screenshot hyperlinks with finding and test context. Component evidence is cropped around the component and target; full-page evidence is reserved for page-level failures or blockers without a component locator. Audit images are not embedded; native screen-reader transcripts are published separately because they are supporting evidence, not automated conformance proof.
 - Audit Summary contains the landing-page QA URL. Findings start as `Open`; evidence confidence remains separately recorded as `confirmed`, `review`, `blocker`, or `manual`.

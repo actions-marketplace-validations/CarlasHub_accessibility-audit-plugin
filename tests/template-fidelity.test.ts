@@ -5,7 +5,12 @@ import { join } from 'node:path';
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import { CANONICAL_TEMPLATE_SHA256, DEFAULT_TEMPLATE, writeExcelReport } from '../src/reporting/excel.js';
-import { EXPECTED_REPORT_HEADERS, EXPECTED_WORKSHEETS } from '../src/reporting/validate.js';
+import {
+  EXPECTED_REPORT_HEADERS,
+  EXPECTED_TEMPLATE_REPORT_HEADERS,
+  EXPECTED_TEMPLATE_WORKSHEETS,
+  EXPECTED_WORKSHEETS
+} from '../src/reporting/validate.js';
 import type { AuditSummary } from '../src/types.js';
 
 function summaryWithEvidence(screenshot: string): AuditSummary {
@@ -43,7 +48,7 @@ function summaryWithEvidence(screenshot: string): AuditSummary {
         pageUrl: 'https://preview.example.test/',
         viewport: 'desktop',
         selector: 'main img',
-        detail: '<img>',
+        detail: JSON.stringify({ contrastRatio: 2.1, expectedRatio: 4.5, html: '<img class="hero">' }),
         screenshot
       }],
       assignment: 'Development',
@@ -63,8 +68,8 @@ describe('CarlasHub WCAG workbook template fidelity', () => {
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(DEFAULT_TEMPLATE);
-    expect(workbook.worksheets.map((worksheet) => worksheet.name)).toEqual(EXPECTED_WORKSHEETS);
-    expect(workbook.getWorksheet('Findings')?.getRow(6).values).toEqual([undefined, ...EXPECTED_REPORT_HEADERS]);
+    expect(workbook.worksheets.map((worksheet) => worksheet.name)).toEqual(EXPECTED_TEMPLATE_WORKSHEETS);
+    expect(workbook.getWorksheet('Findings')?.getRow(6).values).toEqual([undefined, ...EXPECTED_TEMPLATE_REPORT_HEADERS]);
     expect(workbook.getWorksheet('Page Inventory')?.getRow(4).values).toEqual([
       undefined, 'URL', 'Audit state', 'Viewports planned', 'Viewports completed', 'Consent handling', 'Runtime errors', 'Notes'
     ]);
@@ -90,7 +95,7 @@ describe('CarlasHub WCAG workbook template fidelity', () => {
     })).rejects.toThrow('does not match the CarlasHub WCAG audit template');
   });
 
-  it('preserves the six-sheet design while extending styled report rows', async () => {
+  it('preserves the canonical sheets while adding the generated criterion ledger', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'a11y-template-fidelity-'));
     const screenshotDirectory = join(directory, 'screenshots', 'elements');
     await mkdir(screenshotDirectory, { recursive: true });
@@ -111,19 +116,29 @@ describe('CarlasHub WCAG workbook template fidelity', () => {
       const generatedSheet = generated.getWorksheet(templateSheet.name);
       expect(generatedSheet?.state).toBe(templateSheet.state);
       expect(generatedSheet?.properties.tabColor).toEqual(templateSheet.properties.tabColor);
-      expect(generatedSheet?.views).toEqual(templateSheet.views);
+      expect(generatedSheet?.views[0]?.showGridLines).toBe(false);
     }
 
-    const templateFindings = template.getWorksheet('Findings')!;
     const generatedFindings = generated.getWorksheet('Findings')!;
+    expect(generatedFindings.getRow(6).values).toEqual([undefined, ...EXPECTED_REPORT_HEADERS]);
+    const expectedWidths = [12, 14, 12, 16, 14, 8, 22, 34, 18, 22, 22, 32, 36, 34, 30, 34, 36, 34, 36, 14, 12, 18, 18, 18, 16];
+    const hiddenColumns = new Set([6, 7, 9, 11, 15, 16, 24, 25]);
     for (let column = 1; column <= EXPECTED_REPORT_HEADERS.length; column += 1) {
-      expect(generatedFindings.getColumn(column).width).toBe(templateFindings.getColumn(column).width);
-      expect(generatedFindings.getCell(6, column).fill).toEqual(templateFindings.getCell(6, column).fill);
-      expect(generatedFindings.getCell(6, column).font).toEqual(templateFindings.getCell(6, column).font);
-      expect(generatedFindings.getCell(9, column).fill).toEqual(templateFindings.getCell(7, column).fill);
-      expect(generatedFindings.getCell(9, column).font).toEqual(templateFindings.getCell(7, column).font);
-      expect(generatedFindings.getCell(9, column).border).toEqual(templateFindings.getCell(7, column).border);
+      expect(generatedFindings.getColumn(column).width).toBe(expectedWidths[column - 1]);
+      expect(generatedFindings.getColumn(column).hidden ?? false).toBe(hiddenColumns.has(column));
+      expect((generatedFindings.getCell(6, column).fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FF1A73E8');
+      expect(generatedFindings.getCell(6, column).font.color?.argb).toBe('FFFFFFFF');
+      expect(generatedFindings.getCell(6, column).font.bold).toBe(true);
     }
+    expect(generatedFindings.views[0]).toEqual(expect.objectContaining({ xSplit: 2, ySplit: 6, showGridLines: false }));
+    expect((generatedFindings.getCell('B9').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFFCE8E6');
+    expect((generatedFindings.getCell('D9').fill as ExcelJS.FillPattern).fgColor?.argb).toBe('FFC5221F');
+    expect(generatedFindings.getCell('D9').font.color?.argb).toBe('FFFFFFFF');
+    expect(generatedFindings.getCell('D9').font.bold).toBe(true);
+    expect(generatedFindings.getCell('D9').value).toBe('Serious');
+    expect(generatedFindings.getCell('M9').value).toBe('The image has no text alternative.');
+    expect(generatedFindings.getCell('Q9').value).toContain('Contrast Ratio: 2.1');
+    expect(generatedFindings.getCell('Q9').value).not.toContain('{');
     expect(generatedFindings.autoFilter).toBe('A6:Y9');
     expect(generatedFindings.getCell('B9').dataValidation.formulae?.[0]).toContain('manual');
     expect(generatedFindings.getCell('T9').dataValidation.formulae?.[0]).toContain('Development');
@@ -131,6 +146,8 @@ describe('CarlasHub WCAG workbook template fidelity', () => {
     expect(generatedFindings.getCell('Y9').dataValidation.formulae?.[0]).toContain('Review');
     expect(generated.getWorksheet('Page Inventory')?.getCell('A5').text).toBe('https://preview.example.test/');
     expect(generated.getWorksheet('Evidence')?.getCell('A5').hyperlink).toContain('screenshots/elements/element.png');
+    expect(generated.getWorksheet('Evidence')?.getCell('I5').value).toContain('Contrast Ratio: 2.1');
+    expect(generated.getWorksheet('Evidence')?.getCell('I5').value).not.toContain('{');
     expect(generated.getWorksheet('Manual Checks')?.getCell('A5').value).toBeNull();
     expect(generated.getWorksheet('WCAG 2.2 Reference')?.getCell('A4').value).toEqual(
       template.getWorksheet('WCAG 2.2 Reference')?.getCell('A4').value

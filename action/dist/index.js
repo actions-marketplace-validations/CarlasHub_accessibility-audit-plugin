@@ -145426,11 +145426,11 @@ function getDiscriminatedOption(union, value) {
 }
 const $ZodDiscriminatedUnion = 
 /*@__PURE__*/
-(/* unused pure expression or super */ null && (core.$constructor("$ZodDiscriminatedUnion", (inst, def) => {
+$constructor("$ZodDiscriminatedUnion", (inst, def) => {
     def.inclusive = false;
     $ZodUnion.init(inst, def);
     const _super = inst._zod.parse;
-    util.defineLazyInternal(inst, "propValues", (zod) => {
+    defineLazyInternal(inst, "propValues", (zod) => {
         const propValues = {};
         for (const option of zod.def.options) {
             const pv = option._zod.propValues;
@@ -145438,7 +145438,7 @@ const $ZodDiscriminatedUnion =
                 throw new Error(`Invalid discriminated union option at index "${zod.def.options.indexOf(option)}"`);
             for (const [k, v] of Object.entries(pv)) {
                 if (!Object.prototype.hasOwnProperty.call(propValues, k)) {
-                    util.assignProp(propValues, k, new Set());
+                    util_assignProp(propValues, k, new Set());
                 }
                 for (const val of v) {
                     propValues[k].add(val);
@@ -145454,7 +145454,7 @@ const $ZodDiscriminatedUnion =
             throw new Error(`Invalid discriminated union option at index "${i}"`);
         }
     });
-    const disc = util.cached(() => {
+    const disc = cached(() => {
         const opts = def.options;
         const map = new Map();
         for (const o of opts) {
@@ -145472,7 +145472,7 @@ const $ZodDiscriminatedUnion =
     });
     inst._zod.parse = (payload, ctx) => {
         const input = payload.value;
-        if (!util.isObject(input)) {
+        if (!util_isObject(input)) {
             payload.issues.push({
                 code: "invalid_type",
                 expected: "object",
@@ -145504,7 +145504,7 @@ const $ZodDiscriminatedUnion =
         });
         return payload;
     };
-})));
+});
 const $ZodIntersection = /*@__PURE__*/ $constructor("$ZodIntersection", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, ctx) => {
@@ -146044,14 +146044,14 @@ const $ZodEnum = /*@__PURE__*/ $constructor("$ZodEnum", (inst, def) => {
         return payload;
     };
 });
-const $ZodLiteral = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("$ZodLiteral", (inst, def) => {
+const $ZodLiteral = /*@__PURE__*/ $constructor("$ZodLiteral", (inst, def) => {
     $ZodType.init(inst, def);
     const values = new Set(def.values);
     inst._zod.values = values;
     // unmatchable fallback, RE2-safe: an empty alternation would compile to /^()$/, which matches ""
     inst._zod.pattern = new RegExp(def.values.length
         ? `^(${def.values
-            .map((o) => (typeof o === "string" ? util.escapeRegex(o) : o ? util.escapeRegex(o.toString()) : String(o)))
+            .map((o) => (typeof o === "string" ? escapeRegex(o) : o ? escapeRegex(o.toString()) : String(o)))
             .join("|")})$`
         : "^[^\\s\\S]$");
     inst._zod.parse = (payload, _ctx) => {
@@ -146067,7 +146067,7 @@ const $ZodLiteral = /*@__PURE__*/ (/* unused pure expression or super */ null &&
         });
         return payload;
     };
-})));
+});
 const $ZodFile = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("$ZodFile", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, _ctx) => {
@@ -150282,17 +150282,17 @@ function xor(options, params) {
         ...util.normalizeParams(params),
     });
 }
-const ZodDiscriminatedUnion = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("ZodDiscriminatedUnion", (inst, def) => {
+const ZodDiscriminatedUnion = /*@__PURE__*/ $constructor("ZodDiscriminatedUnion", (inst, def) => {
     ZodUnion.init(inst, def);
-    core.$ZodDiscriminatedUnion.init(inst, def);
-})));
+    $ZodDiscriminatedUnion.init(inst, def);
+});
 function discriminatedUnion(discriminator, options, params) {
     // const [options, params] = args;
     return new ZodDiscriminatedUnion({
         type: "union",
         options: options,
         discriminator,
-        ...util.normalizeParams(params),
+        ...normalizeParams(params),
     });
 }
 const ZodIntersection = /*@__PURE__*/ $constructor("ZodIntersection", (inst, def) => {
@@ -150485,10 +150485,10 @@ function nativeEnum(entries, params) {
         ...util.normalizeParams(params),
     });
 }
-const ZodLiteral = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("ZodLiteral", (inst, def) => {
-    core.$ZodLiteral.init(inst, def);
+const ZodLiteral = /*@__PURE__*/ $constructor("ZodLiteral", (inst, def) => {
+    $ZodLiteral.init(inst, def);
     ZodType.init(inst, def);
-    inst._zod.processJSONSchema = (ctx, json, params) => processors.literalProcessor(inst, ctx, json, params);
+    inst._zod.processJSONSchema = (ctx, json, params) => literalProcessor(inst, ctx, json, params);
     inst.values = new Set(def.values);
     Object.defineProperty(inst, "value", {
         get() {
@@ -150498,12 +150498,12 @@ const ZodLiteral = /*@__PURE__*/ (/* unused pure expression or super */ null && 
             return def.values[0];
         },
     });
-})));
+});
 function literal(value, params) {
     return new ZodLiteral({
         type: "literal",
         values: Array.isArray(value) ? value : [value],
-        ...util.normalizeParams(params),
+        ...normalizeParams(params),
     });
 }
 const ZodFile = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("ZodFile", (inst, def) => {
@@ -150879,18 +150879,18 @@ Execution rules:
 3. Validate same-origin links conservatively. Confirm 404/410 only when both the authenticated request context and an in-page fetch agree. Keep server errors, placeholder destinations, and ambiguous states as review items. Do not request external, download, logout, delete, or unsubscribe destinations.
 4. Capture at most one representative contextual element screenshot per final confirmed, blocker, or review reporting unit when the relevant rendered state can be reproduced. Keep all occurrences traceable in JSON. Use full-page evidence only for page-level failures or an unresolved blocking surface. Store PNGs beside the workbook and add relative hyperlinks in Findings and Evidence. Never embed audit screenshots in the workbook.
 5. Display progress through MCP notifications in Cursor, Claude, Codex, or Copilot and through stderr in terminal runs. The client Stop action or one Ctrl+C requests graceful cancellation: close active browser work, retain completed evidence, and write partial HTML and JSON plus a validated partial XLSX workbook. Label that output cancelled/partial. A second Ctrl+C is an immediate exit and may prevent final report writing.
-6. Do not claim that automation or axe covers all WCAG 2.2 A/AA requirements. Retrieve list_guided_manual_checks and preserve screen-reader, physical-device, content, visual, and judgment-based checks as outstanding until a person performs them.
+6. Treat WCAG 2.2 Level AA as the public conformance target. AAA checks are optional advisory evidence and must never relabel the audit as an AAA conformance assessment. Do not claim that automation, axe, or a scripted screen-reader journey covers all WCAG 2.2 requirements. Retrieve list_guided_manual_checks, confirm that it contains one criterion-specific procedure and evidence prompt for each of the 55 active A/AA criteria, and preserve screen-reader, physical-device, content, visual, and judgment-based checks as outstanding until a qualified person performs them.
 7. Treat deterministic reproduced failures as confirmed issues. Keep heuristics or unresolved content and visual questions as review issues. Keep unavailable pages as blockers. Keep unexecuted assistive-technology and judgment-based procedures as guided/manual checks.
 8. Use one row for the same reusable component implementation and root cause across all affected pages, and group repeated DOM instances within that component. List every affected page individually in the merged row's Links cell. Keep a page-specific implementation, colour treatment, behaviour, success criterion, or remediation requirement on its own row. Do not merge unrelated findings merely because they share a host or WCAG criterion. Do not report missing aria-controls alone as a WCAG failure or standalone review for an ordinary disclosure/accordion; generic disclosures/accordions do not require Escape to close.
 9. If a modal, consent layer, or other surface cannot be dismissed, record it as an interaction-coverage blocker, skip underlying state-based checks, and never interpret the resulting focus sequence or absence of findings as a page pass. Preserve axe incomplete results, unresolved focus-indicator samples, and incomplete interactions as raw JSON evidence and inconclusive coverage; do not promote them to workbook findings. Record every page/viewport/area outcome in the JSON coverage matrix using confirmed-passed, confirmed-failed, tested-inconclusive, manual-review-required, not-tested, or not-applicable.
 
 Report rules:
-1. Generate the self-contained accessible HTML report, six-sheet CarlasHub WCAG 2.2 workbook, and JSON evidence. Preserve the workbook's worksheet order, tab colours, accessible colour scheme, formulas, validations, filters, and the 25 Findings columns. Remove placeholder values and do not add worksheets or columns.
-2. Populate Page Inventory with one structured row per requested or skipped URL, Evidence with one structured row per retained evidence item, Manual Checks with every outstanding guided procedure, and Findings with one row per reporting unit. Use portable relative links for screenshots and direct links for page URLs. Do not embed screenshots.
+1. Generate the self-contained accessible HTML report, seven-sheet CarlasHub WCAG 2.2 workbook, and JSON evidence. Preserve the six canonical template worksheets in their existing order, tab colours, accessible colour scheme, formulas, validations, filters, and the 25 Findings columns; append only the generated WCAG Criteria ledger. Remove placeholder values and do not add other worksheets or columns.
+2. Populate Page Inventory with one structured row per requested or skipped URL, Evidence with one structured row per retained evidence item, Manual Checks with one criterion-specific procedure and evidence prompt for each of the 55 active WCAG 2.2 A/AA criteria, Findings with one row per reporting unit, and WCAG Criteria with every active WCAG 2.2 success criterion labelled passed, failed, manual-review-required, not-applicable, or inconclusive. Use portable relative links for screenshots and direct links for page URLs. Do not embed screenshots.
 3. Put only concrete fixes in Notes. Do not mention Jira, ticket workflow, audit narration, or uncertainty in remediation fields.
 4. Put the single landing-page QA URL in Audit Summary, use the supplied auditor name exactly, set every populated Findings row to Open, preserve confirmed, review, blocker, or manual as its Evidence type, and populate Owner and Effort from the finding. Validate the workbook with validate_accessibility_report before delivery.
 5. Report whether the run completed or was cancelled, the exact HTML, workbook, JSON, and portable ZIP paths, pages completed/partial/not started, counts by confirmed/review/blocker/manual classification, Evidence row and linked screenshot counts, and workbook validation result.
-6. Call the result an evidence-backed structured audit, not a certification or complete WCAG conformance verdict. A confirmed pass applies only to the exact executed rule and state; axe incomplete results, truncated link checks, sampled keyboard traversal, and unexercised states are not passes.
+6. Call the result an evidence-backed structured audit, not a certification or complete WCAG conformance verdict. Keep the conformance decision as not determined until qualified human assessment is complete. A confirmed pass applies only to the exact executed rule and state; axe incomplete results, truncated link checks, scripted keyboard or screen-reader journeys, and unexercised states are not passes.
 7. Explain the result in plain language for a user who may not know WCAG. State that only supplied URLs were tested; define the evidence categories that are present; distinguish the workbook's Open workflow status from evidence confidence; identify outstanding guided checks; and tell the user to extract the ZIP and keep the workbook with its screenshots directory so relative evidence links work.`));
 function buildEmbeddedAuditInstructions(options = {}) {
     const targets = options.targets?.trim() || '[ask for URL(s) or an XLSX/CSV/TXT/JSON page-list path]';
@@ -150930,9 +150930,48 @@ const viewportSchema = object({
     height: schemas_number().int().positive(),
     isMobile: schemas_boolean().optional()
 });
+const journeyStepSchema = discriminatedUnion('action', [
+    object({ action: literal('focus'), selector: schemas_string().min(1).max(1000) }),
+    object({ action: literal('press'), key: schemas_string().min(1).max(80), selector: schemas_string().min(1).max(1000).optional() }),
+    object({ action: literal('type'), selector: schemas_string().min(1).max(1000), text: schemas_string().max(10_000) }),
+    object({ action: literal('wait'), milliseconds: schemas_number().int().min(0).max(5_000) }),
+    object({
+        action: literal('assert'),
+        expectation: schemas_enum([
+            'focused',
+            'visible',
+            'hidden',
+            'expanded',
+            'collapsed',
+            'pressed',
+            'unpressed',
+            'selected',
+            'checked',
+            'unchecked',
+            'invalid',
+            'valid',
+            'url-contains',
+            'text-contains',
+            'value-equals',
+            'live-region-updated'
+        ]),
+        selector: schemas_string().min(1).max(1000).optional(),
+        value: schemas_string().max(10_000).optional(),
+        timeoutMs: schemas_number().int().min(0).max(10_000).optional()
+    })
+]);
+const journeySchema = object({
+    id: schemas_string().min(1).max(100).regex(/^[a-z0-9][a-z0-9_-]*$/i),
+    title: schemas_string().min(1).max(200),
+    categories: array(schemas_enum(['keyboard', 'forms', 'interaction', 'dynamic-content'])).min(1).max(4),
+    urlIncludes: schemas_string().min(1).max(2000).optional(),
+    viewports: array(schemas_string().min(1).max(100)).min(1).max(20).optional(),
+    steps: array(journeyStepSchema).min(1).max(100)
+});
 const configSchema = object({
     auditor: schemas_string().min(1).default(DEFAULT_AUDITOR),
     wcagLevel: schemas_enum(['AA', 'AAA']).default('AA'),
+    aaaAdvisory: schemas_boolean().default(false),
     outputDir: schemas_string().min(1).default(DEFAULT_OUTPUT_DIR),
     landingPageUrl: schemas_string().url().optional(),
     allowedHosts: array(schemas_string().min(1)).default([]),
@@ -150946,13 +150985,16 @@ const configSchema = object({
     maxLinksPerPage: schemas_number().int().min(1).max(1000).default(200),
     concurrency: schemas_number().int().min(1).max(8).default(2),
     captureScreenshots: schemas_boolean().default(true),
-    viewports: array(viewportSchema).min(1).default(DEFAULT_VIEWPORTS)
+    viewports: array(viewportSchema).min(1).default(DEFAULT_VIEWPORTS),
+    journeys: array(journeySchema).max(100).default([])
 });
 function resolveOptions(input = {}) {
     const parsed = configSchema.parse(input);
+    const aaaAdvisory = parsed.aaaAdvisory || parsed.wcagLevel === 'AAA';
     return {
         auditor: parsed.auditor,
-        wcagLevel: parsed.wcagLevel,
+        wcagLevel: aaaAdvisory ? 'AAA' : 'AA',
+        aaaAdvisory,
         outputDir: (0,external_node_path_.resolve)(parsed.outputDir),
         ...(parsed.landingPageUrl ? { landingPageUrl: parsed.landingPageUrl } : {}),
         allowedHosts: parsed.allowedHosts.map((host) => host.toLowerCase()),
@@ -150969,6 +151011,26 @@ function resolveOptions(input = {}) {
             width: viewport.width,
             height: viewport.height,
             ...(viewport.isMobile !== undefined ? { isMobile: viewport.isMobile } : {})
+        })),
+        journeys: parsed.journeys.map((journey) => ({
+            id: journey.id,
+            title: journey.title,
+            categories: journey.categories,
+            steps: journey.steps.map((step) => {
+                if (step.action === 'press')
+                    return { action: step.action, key: step.key, ...(step.selector ? { selector: step.selector } : {}) };
+                if (step.action === 'assert')
+                    return {
+                        action: step.action,
+                        expectation: step.expectation,
+                        ...(step.selector ? { selector: step.selector } : {}),
+                        ...(step.value !== undefined ? { value: step.value } : {}),
+                        ...(step.timeoutMs !== undefined ? { timeoutMs: step.timeoutMs } : {})
+                    };
+                return step;
+            }),
+            ...(journey.urlIncludes ? { urlIncludes: journey.urlIncludes } : {}),
+            ...(journey.viewports ? { viewports: journey.viewports } : {})
         })),
         ...(parsed.channel ? { channel: parsed.channel } : {}),
         ...(parsed.executablePath ? { executablePath: parsed.executablePath } : {})
@@ -151000,57 +151062,72 @@ var external_axe_core_x = (y) => {
 var external_axe_core_y = (x) => (() => (x))
 const external_axe_core_namespaceObject = external_axe_core_x({ ["default"]: () => (__WEBPACK_EXTERNAL_MODULE_axe_core_3dc01cd1__["default"]) });
 ;// CONCATENATED MODULE: ./dist/audit/manual-checks.js
-const REQUIRED_MANUAL_CHECKS = [
-    {
-        id: 'manual-keyboard-complete',
-        title: 'Complete keyboard-only journey',
-        wcag: ['2.1.1', '2.1.2', '2.4.3', '2.4.7', '2.4.11'],
-        applicableTo: 'Every unique page template and interactive component state',
-        procedure: 'Use Tab, Shift+Tab, Enter, Space, and pattern-appropriate arrow keys without a pointer. Test Escape only for patterns that require or document it, such as dialogs and applicable menus or popovers; do not require it for an ordinary accordion or disclosure. Confirm logical order, operation, no trap, visible focus, and no focus obscuration.'
-    },
-    {
-        id: 'manual-screen-reader-combinations',
-        title: 'Supported screen-reader and browser combinations',
-        wcag: ['1.3.1', '2.4.3', '2.4.6', '3.2.4', '4.1.2', '4.1.3'],
-        applicableTo: 'Navigation, forms, validation, search, tabs, dialogs, carousels, and dynamic status messages',
-        procedure: 'Run the agreed production screen-reader and browser combinations manually, including desktop and mobile assistive technologies. Confirm names, roles, states, values, reading order, focus, instructions, errors, and dynamic announcements.'
-    },
-    {
-        id: 'manual-zoom-reflow',
-        title: 'Zoom, text resize, and reflow',
-        wcag: ['1.4.4', '1.4.10', '1.4.12'],
-        applicableTo: 'Every unique responsive template',
-        procedure: 'Verify 200% browser zoom, 400% reflow at 1280 CSS pixels, and the WCAG text-spacing overrides. Check that content and controls remain available without two-dimensional scrolling except permitted content.'
-    },
-    {
-        id: 'manual-contrast-states',
-        title: 'Contrast in all component states',
-        wcag: ['1.4.3', '1.4.11', '2.4.7', '2.4.11'],
-        applicableTo: 'Text, icons, controls, validation, hover, focus, selected, disabled, and image backgrounds',
-        procedure: 'Measure foreground/background pairs in every state, including gradients and imagery that automated tools cannot resolve.'
-    },
-    {
-        id: 'manual-content-meaning',
-        title: 'Content meaning and alternatives',
-        wcag: ['1.1.1', '1.2.1', '1.2.2', '1.2.3', '1.2.5', '2.4.4', '2.4.6', '3.1.2'],
-        applicableTo: 'Images, icons, video/audio, headings, labels, link text, and language changes',
-        procedure: 'Confirm alternatives communicate the same purpose in context, captions and descriptions are accurate, headings/labels are descriptive, and language changes are identified.'
-    },
-    {
-        id: 'manual-cognitive-and-consistency',
-        title: 'Consistency, error prevention, and cognitive checks',
-        wcag: ['3.2.3', '3.2.4', '3.2.6', '3.3.1', '3.3.3', '3.3.7', '3.3.8'],
-        applicableTo: 'Repeated navigation, help, authentication, and data-entry flows',
-        procedure: 'Confirm consistent order and naming, findable help, understandable errors and suggestions, redundant-entry handling, and accessible authentication.'
-    },
-    {
-        id: 'manual-mobile-device',
-        title: 'Physical mobile and touch testing',
-        wcag: ['1.3.4', '2.5.1', '2.5.2', '2.5.4', '2.5.7', '2.5.8'],
-        applicableTo: 'Responsive navigation, touch controls, drag interactions, and orientation changes',
-        procedure: 'Test portrait and landscape on physical devices with touch and mobile screen readers. Confirm alternatives to multipoint, path-based, motion, and dragging gestures and assess target-spacing exceptions.'
-    }
+const criterionChecks = [
+    ['1.1.1', 'Non-text Content', 'Images, icons, charts, controls, CAPTCHA, and decorative content', 'Inspect every meaningful and decorative non-text item in context. Confirm that text alternatives convey the same purpose, complex content has an equivalent explanation, controls are named, and decorative content is ignored by assistive technology.', 'Representative item inventory, accessible-name or alternative text captured, purpose comparison, exceptions, and verdict.'],
+    ['1.2.1', 'Audio-only and Video-only (Prerecorded)', 'Prerecorded audio-only and video-only media', 'For prerecorded audio-only content, verify an equivalent transcript. For prerecorded video-only content, verify an equivalent transcript or audio track, unless the media is itself a clearly labelled text alternative.', 'Media URL, format, transcript or audio-alternative location, equivalence notes, exception if any, and verdict.'],
+    ['1.2.2', 'Captions (Prerecorded)', 'Prerecorded synchronised media with audio', 'Play each prerecorded synchronised media item and verify captions include dialogue and important non-speech information, remain synchronised, identify speakers where needed, and are accurate, unless the media is itself a clearly labelled text alternative.', 'Media URL, sampled timestamps, caption observations, exception if any, and verdict.'],
+    ['1.2.3', 'Audio Description or Media Alternative (Prerecorded)', 'Prerecorded synchronised media', 'Verify that important visual information not available from the soundtrack is provided through audio description or a complete media alternative, unless the media is itself a clearly labelled text alternative.', 'Media URL, important visual events sampled, description or alternative location, exception if any, and verdict.'],
+    ['1.2.4', 'Captions (Live)', 'Live synchronised media', 'Observe representative live media and confirm captions are available for all spoken dialogue and important audio information with usable accuracy and latency.', 'Live event or stream, date and duration sampled, caption accuracy and latency notes, and verdict.'],
+    ['1.2.5', 'Audio Description (Prerecorded)', 'Prerecorded video in synchronised media', 'Play each prerecorded video and confirm an audio description track communicates important visual information during available pauses, unless that information is already present in the main audio.', 'Media URL, sampled visual events and timestamps, audio-description track or integrated-description notes, and verdict.'],
+    ['1.3.1', 'Info and Relationships', 'Headings, regions, lists, tables, forms, groups, emphasis, and visual relationships', 'Compare the visual structure with the accessibility tree and source semantics. Confirm that information, structure, and relationships are programmatically determined or available in text, including labels, instructions, table headers, groups, and landmarks.', 'Page and component, visual relationship, exposed semantic relationship, accessibility-tree or code evidence, and verdict.'],
+    ['1.3.2', 'Meaningful Sequence', 'Content whose presentation order affects meaning', 'Read content in DOM and screen-reader order with styles reduced where useful. Confirm the programmatic sequence preserves meaning and operation at every responsive state.', 'Page and viewport, expected sequence, observed DOM or reading sequence, exception if any, and verdict.'],
+    ['1.3.3', 'Sensory Characteristics', 'Instructions that refer to shape, colour, size, visual location, orientation, or sound', 'Review instructions and cues. Confirm understanding and operation do not rely only on sensory characteristics such as “the red button”, “on the right”, shape, position, or sound.', 'Instruction text, sensory reference, additional non-sensory cue, affected task, and verdict.'],
+    ['1.3.4', 'Orientation', 'Responsive pages and components on supported mobile devices', 'Test portrait and landscape orientations on physical devices or equivalent emulation. Confirm content and operation are not restricted to one orientation unless a specific orientation is essential.', 'Device and browser, both orientations, screenshots or observations, essential exception if any, and verdict.'],
+    ['1.3.5', 'Identify Input Purpose', 'Inputs collecting information about the user', 'Inspect eligible personal-data fields and confirm their purposes are programmatically identified using valid autocomplete tokens or another accessibility-supported mechanism.', 'Form and field, visible label, programmatic purpose or autocomplete token, applicability, and verdict.'],
+    ['1.4.1', 'Use of Color', 'Text, links, states, validation, charts, and controls using colour', 'Review every state and data visualisation without relying on colour perception. Confirm colour is not the only visual means of conveying information, prompting a response, indicating an action, or distinguishing an element.', 'Component and state, colour cue, additional text, icon, pattern, or shape cue, and verdict.'],
+    ['1.4.2', 'Audio Control', 'Audio that starts automatically', 'Load pages with audio enabled. If audio plays automatically for more than three seconds, confirm a keyboard-accessible pause/stop control or independent volume control is available.', 'Page, autoplay duration, pause/stop or volume control result, keyboard result, and verdict.'],
+    ['1.4.3', 'Contrast (Minimum)', 'Text and images of text in every state and background', 'Measure rendered foreground and background colours, including hover, focus, selected, validation, gradients, and imagery. Confirm at least 4.5:1 for normal text and 3:1 for large text, applying only the permitted exceptions.', 'Text sample and state, font size and weight, foreground/background values, measured ratio, exception if any, and verdict.'],
+    ['1.4.4', 'Resize Text', 'Every unique responsive template and text-bearing component', 'Resize text to 200% without assistive technology and complete representative tasks. Confirm no loss of content or functionality, except for captions and images of text.', 'Page, browser and settings, task, lost or overlapping content observations, screenshots, and verdict.'],
+    ['1.4.5', 'Images of Text', 'Images containing text', 'Inspect images and CSS backgrounds that contain text. Confirm actual text is used whenever the required visual presentation can be achieved with supported technologies, allowing only essential presentation and logos.', 'Image location, transcribed text, reason an image is used, essential or logo exception if any, and verdict.'],
+    ['1.4.10', 'Reflow', 'Every unique responsive page and component', 'At 1280 by 1024 CSS pixels, zoom to 400% or test an equivalent 320 CSS-pixel-wide viewport; also test 256 CSS-pixel height for horizontal content. Confirm content and functionality work without two-dimensional scrolling except where a two-dimensional layout is essential.', 'Page, viewport and zoom, horizontal/vertical overflow observations, essential-content exception if any, screenshots, and verdict.'],
+    ['1.4.11', 'Non-text Contrast', 'Controls, states, focus indicators, icons, charts, and meaningful graphics', 'Measure adjacent colours needed to identify user-interface components, states, and graphical objects. Confirm at least 3:1 contrast, applying the inactive, user-agent, unmodified, or essential exceptions correctly.', 'Component and state, adjacent colours, measured ratio, exception if any, and verdict.'],
+    ['1.4.12', 'Text Spacing', 'All pages with authored text styling', 'Apply line height 1.5 times font size, paragraph spacing 2 times, letter spacing 0.12 times, and word spacing 0.16 times. Confirm no content or functionality is lost.', 'Page, override method, affected component, clipping/overlap observations, screenshots, and verdict.'],
+    ['1.4.13', 'Content on Hover or Focus', 'Tooltips, menus, popovers, and other additional content triggered by hover or focus', 'Trigger additional content with pointer hover and keyboard focus. Confirm it is dismissible without moving focus or pointer, hoverable when the pointer can enter it, and persistent until dismissed, invalid, or no longer triggered, applying permitted exceptions.', 'Trigger and content, keyboard/pointer method, dismissible/hoverable/persistent results, exception if any, and verdict.'],
+    ['2.1.1', 'Keyboard', 'Every interactive component and representative user journey', 'Operate all functionality with a keyboard interface using Tab, Shift+Tab, Enter, Space, and pattern-appropriate keys. Confirm operation does not require specific timing for individual keystrokes unless the function depends on the path of movement rather than endpoints.', 'Page, journey and component, keys used, expected and actual behaviour, path-dependent exception if any, and verdict.'],
+    ['2.1.2', 'No Keyboard Trap', 'Every component that can receive keyboard focus', 'Enter and leave each interactive region using only the keyboard. Confirm focus is never trapped; if a non-standard exit method is essential, verify the user is told how to use it.', 'Component, entry and exit sequence, focus trace, escape instruction if applicable, and verdict.'],
+    ['2.1.4', 'Character Key Shortcuts', 'Single-character shortcuts active on the page', 'Identify shortcuts using letters, punctuation, numbers, or symbols without modifiers. Confirm each can be turned off, remapped to include a non-printing key, or is active only while its relevant component has focus.', 'Shortcut inventory, scope, disable/remap/focus-only result, settings screenshot if relevant, and verdict.'],
+    ['2.2.1', 'Timing Adjustable', 'Sessions, forms, dialogs, carousels, and tasks with time limits', 'Identify every content time limit. Confirm users can turn it off, adjust it to at least ten times the default, or extend it after a warning with at least 20 seconds to respond, unless a listed real-time, essential, or longer-than-20-hours exception applies.', 'Time limit and default, warning timing, adjustment or extension result, exception rationale if any, and verdict.'],
+    ['2.2.2', 'Pause, Stop, Hide', 'Moving, blinking, scrolling, or auto-updating content', 'For moving, blinking, or scrolling content that starts automatically, lasts over five seconds, and runs alongside other content, verify a pause, stop, or hide control. For auto-updating content, verify pause, stop, hide, or update-frequency control unless essential.', 'Content and duration, simultaneous content, control and keyboard result, essential exception if any, and verdict.'],
+    ['2.3.1', 'Three Flashes or Below Threshold', 'Video, animation, games, advertising, and scripted visual effects', 'Review all flashing content and use an appropriate flash-analysis tool where flashing may approach the threshold. Confirm no content flashes more than three times in any one-second period or that it remains below the general and red-flash thresholds.', 'Content and time range, flashes per second or analysis-tool result, threshold evidence, and verdict.'],
+    ['2.4.1', 'Bypass Blocks', 'Pages sharing repeated navigation or other repeated content', 'Using keyboard and screen reader navigation, confirm a mechanism such as a working skip link, landmarks, or headings lets users bypass repeated blocks and reach main content efficiently.', 'Page/template, bypass mechanism, keyboard and screen-reader result, target reached, and verdict.'],
+    ['2.4.2', 'Page Titled', 'Every audited document and route, including client-side route changes', 'Inspect the document title before and after navigation. Confirm it identifies the page topic or purpose and updates appropriately for route or context changes.', 'URL or route, observed title, expected topic or purpose, update behaviour, and verdict.'],
+    ['2.4.3', 'Focus Order', 'Every focusable component and dynamic interaction', 'Traverse with keyboard and exercise dialogs, menus, validation, updates, and responsive states. Confirm focus follows a sequence that preserves meaning and operability and moves predictably when content changes.', 'Page and journey, ordered focus trace, dynamic focus transitions, discrepancy if any, and verdict.'],
+    ['2.4.4', 'Link Purpose (In Context)', 'Links in navigation, body content, cards, tables, and repeated components', 'Review each link with its programmatically determined context. Confirm its purpose can be understood from the link text alone or together with that context, except where the purpose is ambiguous to users generally.', 'Link text, accessible name, programmatic context, destination or action, ambiguity exception if any, and verdict.'],
+    ['2.4.5', 'Multiple Ways', 'Pages within a set of web pages', 'Confirm users can locate each page through at least two mechanisms, such as navigation, search, sitemap, table of contents, or related links, except where the page is a step in or result of a process.', 'Page set, target page, two locating mechanisms, process exception if any, and verdict.'],
+    ['2.4.6', 'Headings and Labels', 'Headings and labels throughout each page and flow', 'Review headings and labels in context. Confirm they describe the topic or purpose of the content or control they identify.', 'Heading or label, associated content/control, purpose comparison, duplicate-context notes, and verdict.'],
+    ['2.4.7', 'Focus Visible', 'All keyboard-operable controls and links in every state', 'Navigate using the keyboard across supported browsers and themes. Confirm every keyboard-operable control displays a visible focus indicator whenever it receives focus.', 'Component and state, browser/theme, focus indicator description or screenshot, and verdict.'],
+    ['2.4.11', 'Focus Not Obscured (Minimum)', 'Focused components with sticky, fixed, modal, or overlapping authored content', 'Move focus through pages, overlays, sticky headers, cookie banners, and responsive states. Confirm the focused component is not entirely hidden by author-created content at its initial focus position.', 'Page, focused component, viewport, overlapping content, screenshot, exception if any, and verdict.'],
+    ['2.5.1', 'Pointer Gestures', 'Multipoint or path-based pointer interactions', 'Identify pinch, swipe, drawing, and other multipoint or path-based gestures. Confirm every function also works with a single pointer without a path-based gesture unless the gesture is essential.', 'Gesture and function, single-pointer alternative, essential exception if any, device, and verdict.'],
+    ['2.5.2', 'Pointer Cancellation', 'Controls and interactions operated by a single pointer', 'Test mouse and touch activation. Confirm the down-event does not complete the function, or users can abort/undo it, reverse before completion, or the down-event is essential.', 'Component, input device, down/up behaviour, abort or undo result, essential exception if any, and verdict.'],
+    ['2.5.3', 'Label in Name', 'Controls with visible text labels or text in images', 'Compare each visible label with the programmatic accessible name. Confirm the accessible name contains the visible label text, preferably beginning with it, while accounting for equivalent handling of symbols.', 'Component, exact visible label, computed accessible name, comparison, and verdict.'],
+    ['2.5.4', 'Motion Actuation', 'Functions triggered by device or user motion', 'Identify shake, tilt, camera gesture, or other motion-triggered functions. Confirm each has a user-interface alternative and motion response can be disabled unless motion is essential or used through an accessibility-supported interface.', 'Motion function, interface alternative, disable setting, device, exception if any, and verdict.'],
+    ['2.5.7', 'Dragging Movements', 'Drag-and-drop, sliders, maps, reorder, resize, and other dragging interactions', 'Complete every dragging function with mouse and touch, then confirm a single-pointer alternative operates it without dragging unless dragging is essential.', 'Dragging function, non-drag alternative, input device, essential exception if any, and verdict.'],
+    ['2.5.8', 'Target Size (Minimum)', 'Pointer targets in all responsive states', 'Measure targets or the spacing circle around undersized targets. Confirm each target is at least 24 by 24 CSS pixels or satisfies a permitted spacing, equivalent-control, inline, user-agent, or essential exception.', 'Target and viewport, rendered size and spacing measurement, exception if any, screenshot, and verdict.'],
+    ['3.1.1', 'Language of Page', 'Every audited HTML page or document', 'Inspect the programmatically determined default human language and compare it with the page content. Confirm a valid language is exposed to assistive technology.', 'URL, predominant language, programmatic language value, accessibility-tree or code evidence, and verdict.'],
+    ['3.1.2', 'Language of Parts', 'Passages and phrases whose language differs from the page default', 'Review multilingual content and confirm language changes are programmatically identified, excluding proper names, technical terms, words of indeterminate language, and words adopted into the surrounding language.', 'Passage, expected language, programmatic language value, exception if any, and verdict.'],
+    ['3.2.1', 'On Focus', 'All focusable components', 'Move focus to each component without activating it. Confirm receiving focus alone does not initiate an unexpected change of context such as navigation, a new window, major content replacement, or focus relocation.', 'Component, focus method, observed context before/after, expected behaviour, and verdict.'],
+    ['3.2.2', 'On Input', 'Forms, selectors, toggles, and editable controls', 'Change each control value without an explicit submit action. Confirm input alone does not cause an unexpected change of context unless users were advised before using the component.', 'Control, input change, resulting context change, prior advisory text if any, and verdict.'],
+    ['3.2.3', 'Consistent Navigation', 'Navigation mechanisms repeated across pages in the set', 'Compare repeated navigation across representative pages and states. Confirm mechanisms occur in the same relative order unless the user initiates a change.', 'Page set, navigation inventory and order, user-initiated variation if any, and verdict.'],
+    ['3.2.4', 'Consistent Identification', 'Components with the same function across the page set', 'Compare repeated controls, links, icons, and components. Confirm components with the same functionality are identified consistently in visible text and accessible names.', 'Component instances, function, visible labels and accessible names, inconsistency if any, and verdict.'],
+    ['3.2.6', 'Consistent Help', 'Help mechanisms repeated across pages in the set', 'Inventory human contact details, human contact mechanisms, self-help, and automated contact mechanisms repeated across pages. Confirm they appear in the same relative order unless users initiate a change.', 'Page set, help mechanisms and relative order, user-initiated variation if any, and verdict.'],
+    ['3.3.1', 'Error Identification', 'Forms and tasks with detectable input errors', 'Submit empty, invalid, and boundary values. Confirm every automatically detected error identifies the item in error and describes the error in text.', 'Form and field, test value, error identification and text, programmatic association, and verdict.'],
+    ['3.3.2', 'Labels or Instructions', 'Inputs requiring user information or action', 'Review and operate each input. Confirm labels or instructions are provided when content requires user input, including format, required status, constraints, and grouping where necessary.', 'Field or task, required information, visible label/instruction, association, and verdict.'],
+    ['3.3.3', 'Error Suggestion', 'Forms where an input error is automatically detected and a correction is known', 'Trigger each known validation error. Confirm a specific correction suggestion is provided unless it would jeopardise security or the content purpose.', 'Field, invalid value, detected error, correction suggestion, security/purpose exception if any, and verdict.'],
+    ['3.3.4', 'Error Prevention (Legal, Financial, Data)', 'Legal commitments, financial transactions, user-controlled data changes/deletions, and test responses', 'Complete representative high-consequence submissions. Confirm the action is reversible, checked for input errors with correction opportunity, or reviewed and confirmed before final submission.', 'Transaction or task, consequence, reversal/check/confirmation mechanism, tested result, and verdict.'],
+    ['3.3.7', 'Redundant Entry', 'Multi-step processes requiring previously entered information', 'Complete representative processes and note repeated requests for the same information. Confirm earlier information is auto-populated or selectable unless re-entry is essential, required for security, or the information is no longer valid.', 'Process and repeated field, earlier value source, auto-populate/select result, exception if any, and verdict.'],
+    ['3.3.8', 'Accessible Authentication (Minimum)', 'Authentication steps in login, registration, recovery, and sensitive actions', 'Complete each authentication process without relying on a cognitive-function test such as memorising, transcribing, or solving, unless an alternative, assistance mechanism, object recognition, or user-provided non-text content method satisfies the criterion.', 'Authentication flow, cognitive demand, alternative or assistance mechanism, password-manager/copy-paste result, exception if any, and verdict.'],
+    ['4.1.2', 'Name, Role, Value', 'Custom and native user-interface components', 'Inspect the accessibility tree and operate each component. Confirm names and roles are programmatically determined, user-settable states and values are exposed, and changes are available to assistive technology.', 'Component, computed name/role/state/value before and after operation, assistive-technology result, and verdict.'],
+    ['4.1.3', 'Status Messages', 'Dynamic success, error, loading, progress, result-count, and cart/status updates', 'Trigger status messages without moving focus. Confirm assistive technology can determine and announce the message through an appropriate role or live region without receiving focus.', 'Trigger, message text, role/live setting, screen-reader announcement and timing, focus result, and verdict.']
 ];
+const REQUIRED_MANUAL_CHECKS = criterionChecks.map(([criterion, title, applicableTo, procedure, expectedEvidence]) => ({
+    id: `manual-wcag-${criterion.replaceAll('.', '-')}`,
+    classification: 'manual',
+    title: `${criterion} ${title}`,
+    wcag: [criterion],
+    applicableTo,
+    procedure,
+    expectedEvidence
+}));
 //# sourceMappingURL=manual-checks.js.map
 ;// CONCATENATED MODULE: ./dist/audit/browser-checks.js
 const focusableSelector = [
@@ -151116,10 +151193,22 @@ async function runDomChecks(page, axeTargetSizeSelectors = []) {
             }
             return parts.join(' > ');
         };
+        const hiddenFromAccessibleName = (element) => {
+            if (element.getAttribute('aria-hidden')?.toLowerCase() === 'true')
+                return 'aria-hidden="true"';
+            const style = getComputedStyle(element);
+            if (style.display === 'none')
+                return 'display:none';
+            if (style.visibility === 'hidden')
+                return 'visibility:hidden';
+            if (style.visibility === 'collapse')
+                return 'visibility:collapse';
+            return '';
+        };
         const descendantTextAlternative = (node) => {
             if (node instanceof Text)
                 return node.textContent?.trim() ?? '';
-            if (!(node instanceof Element) || node.getAttribute('aria-hidden') === 'true')
+            if (!(node instanceof Element) || hiddenFromAccessibleName(node))
                 return '';
             if (node instanceof HTMLImageElement)
                 return node.alt.trim();
@@ -151130,11 +151219,39 @@ async function runDomChecks(page, axeTargetSizeSelectors = []) {
         const descendantTextWithoutImages = (node) => {
             if (node instanceof Text)
                 return node.textContent?.trim() ?? '';
-            if (!(node instanceof Element) || node.getAttribute('aria-hidden') === 'true')
+            if (!(node instanceof Element) || hiddenFromAccessibleName(node))
                 return '';
             if (node instanceof HTMLImageElement || (node instanceof HTMLInputElement && node.type === 'image'))
                 return '';
             return [...node.childNodes].map(descendantTextWithoutImages).filter(Boolean).join(' ').trim();
+        };
+        const excludedNameSources = (element) => {
+            const sources = [];
+            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+            let node = walker.nextNode();
+            while (node) {
+                const text = node.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+                if (text) {
+                    let current = node.parentElement;
+                    let reason = '';
+                    while (current && element.contains(current)) {
+                        reason = hiddenFromAccessibleName(current);
+                        if (reason)
+                            break;
+                        if (current === element)
+                            break;
+                        current = current.parentElement;
+                    }
+                    if (reason && current) {
+                        const source = { selector: cssPath(current), text, reason };
+                        if (!sources.some((item) => item.selector === source.selector && item.text === source.text && item.reason === source.reason)) {
+                            sources.push(source);
+                        }
+                    }
+                }
+                node = walker.nextNode();
+            }
+            return sources;
         };
         const name = (element) => {
             const labelledBy = element.getAttribute('aria-labelledby');
@@ -151212,7 +151329,9 @@ async function runDomChecks(page, axeTargetSizeSelectors = []) {
             .map((link) => ({
             selector: cssPath(link),
             html: link.outerHTML.slice(0, 500),
-            href: link.getAttribute('href') ?? ''
+            href: link.getAttribute('href') ?? '',
+            sourceText: link.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+            excludedNameSources: excludedNameSources(link)
         }));
         const emptyNamedControls = [...document.querySelectorAll(focusables)]
             .filter(visible)
@@ -151315,13 +151434,19 @@ async function runDomChecks(page, axeTargetSizeSelectors = []) {
         const tablesForReview = [...document.querySelectorAll('table')]
             .filter(visible)
             .flatMap((table) => {
-            const reasons = [];
-            if (!table.querySelector('th'))
-                reasons.push('No header cells were found.');
-            if (!table.querySelector('caption') && !table.getAttribute('aria-label') && !table.getAttribute('aria-labelledby')) {
-                reasons.push('No programmatic table name was found.');
-            }
-            return reasons.length ? [{ selector: cssPath(table), reason: reasons.join(' ') }] : [];
+            if (/^(presentation|none)$/i.test(table.getAttribute('role') ?? ''))
+                return [];
+            const rows = [...table.rows].filter((row) => row.closest('table') === table);
+            const columnCount = Math.max(0, ...rows.map((row) => row.cells.length));
+            if (table.querySelector('th') || rows.length < 2 || columnCount < 2)
+                return [];
+            return [{
+                    selector: cssPath(table),
+                    reason: `A visible ${rows.length}-row by ${columnCount}-column data table has no header cells.`,
+                    classification: 'confirmed',
+                    rowCount: rows.length,
+                    columnCount
+                }];
         });
         const autoplayMedia = [...document.querySelectorAll('audio[autoplay], video[autoplay]')]
             .filter(visible)
@@ -151403,17 +151528,10 @@ async function runLinkChecks(page, maxLinks) {
         const rawHref = candidate.rawHref.trim();
         if (!candidate.name || candidate.download || /^(mailto|tel|sms|data|blob):/i.test(rawHref))
             continue;
-        if (!rawHref || rawHref === '#') {
-            results.push({
-                selector: candidate.selector,
-                name: candidate.name,
-                href: rawHref,
-                status: null,
-                classification: 'review',
-                reason: 'The link uses an empty or placeholder destination. Confirm whether it should be a button or point to a real resource.'
-            });
+        // An empty fragment is commonly used as a script-backed control. The URL
+        // alone cannot prove a WCAG failure, so leave it to the interaction checks.
+        if (!rawHref || rawHref === '#')
             continue;
-        }
         if (/^javascript:/i.test(rawHref)) {
             results.push({
                 selector: candidate.selector,
@@ -151526,6 +151644,18 @@ async function runLinkChecks(page, maxLinks) {
     };
 }
 async function runKeyboardChecks(page, maxTabStops) {
+    const focusIdentityAttribute = 'data-a11y-audit-focus-id';
+    // Smooth scrolling can still be mid-animation when a focus position is
+    // sampled, which creates an audit-timing false positive. Normalising only
+    // scroll animation preserves the browser's actual focus order and final
+    // scroll destination while making the measurement deterministic.
+    const scrollBehaviorStyle = await page.addStyleTag({
+        content: 'html, body, * { scroll-behavior: auto !important; }'
+    });
+    await page.locator(`[${focusIdentityAttribute}]`).evaluateAll((elements, attribute) => {
+        for (const element of elements)
+            element.removeAttribute(attribute);
+    }, focusIdentityAttribute);
     await page.evaluate(() => {
         const body = document.body;
         body.dataset.auditTemporaryTabindex = String(body.getAttribute('tabindex') ?? '');
@@ -151535,12 +151665,54 @@ async function runKeyboardChecks(page, maxTabStops) {
     const sequence = [];
     let repeatedAt;
     const seen = new Set();
+    const focusIdentities = [];
+    const waitForFocusedElementToSettle = async () => {
+        await page.evaluate(async () => {
+            const element = document.activeElement;
+            if (!element || element === document.body)
+                return;
+            const intersectsViewport = (rect) => (rect.right > 0 && rect.bottom > 0 && rect.left < innerWidth && rect.top < innerHeight);
+            let previous = element.getBoundingClientRect();
+            if (intersectsViewport(previous))
+                return;
+            const started = performance.now();
+            let stableFrames = 0;
+            await new Promise((resolve) => {
+                const observe = () => {
+                    const current = element.getBoundingClientRect();
+                    if (intersectsViewport(current)) {
+                        resolve();
+                        return;
+                    }
+                    const moved = Math.abs(current.left - previous.left) > 0.5
+                        || Math.abs(current.top - previous.top) > 0.5
+                        || Math.abs(current.right - previous.right) > 0.5
+                        || Math.abs(current.bottom - previous.bottom) > 0.5;
+                    stableFrames = moved ? 0 : stableFrames + 1;
+                    previous = current;
+                    const elapsed = performance.now() - started;
+                    if (elapsed >= 750 || (elapsed >= 350 && stableFrames >= 5)) {
+                        resolve();
+                        return;
+                    }
+                    requestAnimationFrame(observe);
+                };
+                requestAnimationFrame(observe);
+            });
+        });
+    };
     for (let index = 0; index < maxTabStops; index += 1) {
         await page.keyboard.press('Tab');
+        await waitForFocusedElementToSettle();
         const item = await page.evaluate((position) => {
             const element = document.activeElement;
             if (!element || element === document.body)
                 return null;
+            let focusIdentity = element.getAttribute('data-a11y-audit-focus-id');
+            if (!focusIdentity) {
+                focusIdentity = `focus-${position}`;
+                element.setAttribute('data-a11y-audit-focus-id', focusIdentity);
+            }
             const cssPath = (target) => {
                 if (target.id)
                     return `#${CSS.escape(target.id)}`;
@@ -151613,12 +151785,10 @@ async function runKeyboardChecks(page, maxTabStops) {
             ];
             const focusedVisual = visualSignature(style);
             const focusVisible = element.matches(':focus-visible');
-            const scrollPosition = { x: scrollX, y: scrollY };
             element.blur();
             document.body.focus({ preventScroll: true });
             const unfocusedVisual = visualSignature(getComputedStyle(element));
-            element.focus({ preventScroll: true });
-            scrollTo(scrollPosition.x, scrollPosition.y);
+            element.focus();
             const visibleIndicator = focusVisible && focusedVisual.some((value, index) => value !== unfocusedVisual[index]);
             const modal = element.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"], #system-ialert');
             const pageChrome = element.closest('header, [role="banner"], footer, [role="contentinfo"]');
@@ -151627,25 +151797,151 @@ async function runKeyboardChecks(page, maxTabStops) {
                 ?? element;
             return {
                 index: position,
+                focusIdentity,
                 selector: cssPath(element),
                 name,
                 role: element.getAttribute('role') ?? element.tagName.toLowerCase(),
                 visibleIndicator,
                 obscured,
+                outsideViewport: rect.right <= 0 || rect.bottom <= 0 || rect.left >= innerWidth || rect.top >= innerHeight,
                 componentSelector: cssPath(componentRoot),
                 ...(modal ? { modalSelector: cssPath(modal) } : {})
             };
         }, index + 1);
         if (!item)
             break;
-        const identity = `${item.selector}|${item.name}|${item.role}`;
-        if (seen.has(identity)) {
+        const outsideViewportConfirmed = item.outsideViewport
+            ? await page.waitForTimeout(120).then(() => page.evaluate(({ attribute, identity }) => {
+                const element = document.activeElement;
+                if (!element || element.getAttribute(attribute) !== identity)
+                    return false;
+                const rect = element.getBoundingClientRect();
+                return rect.right <= 0 || rect.bottom <= 0 || rect.left >= innerWidth || rect.top >= innerHeight;
+            }, { attribute: focusIdentityAttribute, identity: item.focusIdentity }))
+            : false;
+        const { focusIdentity, ...sequenceItem } = item;
+        if (seen.has(focusIdentity)) {
             repeatedAt = index + 1;
             break;
         }
-        seen.add(identity);
-        sequence.push(item);
+        seen.add(focusIdentity);
+        focusIdentities.push(focusIdentity);
+        sequence.push({ ...sequenceItem, outsideViewportConfirmed });
     }
+    const journeys = [];
+    if (sequence.length >= 2) {
+        const sampleSize = Math.min(sequence.length, 21);
+        const expected = focusIdentities.slice(0, sampleSize).reverse().slice(1);
+        const actual = [];
+        const lastSelector = sequence[sampleSize - 1].selector;
+        const lastFocusIdentity = focusIdentities[sampleSize - 1];
+        const focused = await page.locator(`[${focusIdentityAttribute}="${lastFocusIdentity}"]`).first().focus().then(() => true).catch(() => false);
+        if (focused) {
+            for (let index = 0; index < expected.length; index += 1) {
+                await page.keyboard.press('Shift+Tab');
+                actual.push(await page.evaluate(() => {
+                    const target = document.activeElement;
+                    if (!target || target === document.body)
+                        return 'document-body';
+                    return target.getAttribute('data-a11y-audit-focus-id') ?? 'untracked-focus-target';
+                }));
+            }
+        }
+        const matches = focused && expected.every((selector, index) => actual[index] === selector);
+        const untracked = actual.includes('untracked-focus-target');
+        journeys.push({
+            id: 'forward-reverse-focus-order',
+            title: 'Forward and reverse focus order',
+            status: focused ? (untracked ? 'inconclusive' : matches ? 'passed' : 'failed') : 'inconclusive',
+            steps: [
+                `Recorded ${sequence.length} forward Tab stop${sequence.length === 1 ? '' : 's'}.`,
+                `Replayed ${actual.length} Shift+Tab stop${actual.length === 1 ? '' : 's'} from ${lastSelector}.`
+            ],
+            detail: focused
+                ? untracked
+                    ? 'A reverse Tab stop was re-rendered after the forward sample, so deterministic comparison was not possible.'
+                    : matches
+                        ? 'The sampled reverse sequence matched the forward sequence in reverse order.'
+                        : 'The sampled Shift+Tab sequence did not reverse the recorded Tab sequence; review focus management and dynamic page state.'
+                : 'The last sampled focus target could not be restored for deterministic reverse traversal.'
+        });
+    }
+    else {
+        journeys.push({
+            id: 'forward-reverse-focus-order',
+            title: 'Forward and reverse focus order',
+            status: 'inconclusive',
+            steps: [`Recorded ${sequence.length} forward Tab stops.`],
+            detail: 'At least two stable focus targets are required to compare forward and reverse focus order.'
+        });
+    }
+    const bypass = await page.evaluate(() => {
+        const visible = (element) => {
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+        };
+        const link = [...document.querySelectorAll('a[href^="#"]')]
+            .find((candidate) => candidate.hash.length > 1 && visible(candidate));
+        if (!link)
+            return null;
+        const id = decodeURIComponent(link.hash.slice(1));
+        const target = document.getElementById(id) ?? document.getElementsByName(id)[0] ?? null;
+        return {
+            linkSelector: link.id ? `#${CSS.escape(link.id)}` : `a[href="${CSS.escape(link.getAttribute('href') ?? '')}"]`,
+            name: (link.getAttribute('aria-label') ?? link.textContent ?? '').trim(),
+            targetId: id,
+            targetExists: Boolean(target)
+        };
+    });
+    if (!bypass) {
+        journeys.push({
+            id: 'bypass-blocks',
+            title: 'Bypass repeated blocks',
+            status: 'not-applicable',
+            steps: ['Searched the rendered page for a visible in-page fragment link.'],
+            detail: 'No visible in-page bypass link was found; a human must determine whether repeated content requires another bypass mechanism.'
+        });
+    }
+    else if (!bypass.targetExists) {
+        journeys.push({
+            id: 'bypass-blocks',
+            title: 'Bypass repeated blocks',
+            status: 'failed',
+            steps: [`Found “${bypass.name || bypass.linkSelector}”.`, `Resolved fragment target #${bypass.targetId}.`],
+            detail: 'The visible in-page link points to a target that does not exist.'
+        });
+    }
+    else {
+        const activated = await page.locator(bypass.linkSelector).first().focus().then(async () => {
+            await page.keyboard.press('Enter');
+            await page.waitForTimeout(50);
+            return page.evaluate((targetId) => {
+                const target = document.getElementById(targetId) ?? document.getElementsByName(targetId)[0] ?? null;
+                const active = document.activeElement;
+                if (!target)
+                    return false;
+                const rect = target.getBoundingClientRect();
+                const focusedTarget = active === target || target.contains(active);
+                const targetReached = location.hash === `#${targetId}` && rect.bottom > 0 && rect.top < innerHeight;
+                return focusedTarget || targetReached;
+            }, bypass.targetId);
+        }).catch(() => false);
+        journeys.push({
+            id: 'bypass-blocks',
+            title: 'Bypass repeated blocks',
+            status: activated ? 'passed' : 'failed',
+            steps: [`Focused “${bypass.name || bypass.linkSelector}”.`, 'Pressed Enter.', `Checked target #${bypass.targetId}.`],
+            detail: activated
+                ? 'The bypass link moved focus or the viewport to its declared target.'
+                : 'Activating the bypass link did not move focus or the viewport to its declared target.'
+        });
+    }
+    await page.locator(`[${focusIdentityAttribute}]`).evaluateAll((elements, attribute) => {
+        for (const element of elements)
+            element.removeAttribute(attribute);
+    }, focusIdentityAttribute);
+    await scrollBehaviorStyle.evaluate((element) => element.remove()).catch(() => undefined);
     await page.evaluate(() => {
         const body = document.body;
         const original = body.dataset.auditTemporaryTabindex;
@@ -151668,11 +151964,17 @@ async function runKeyboardChecks(page, maxTabStops) {
         completedCycle: repeatedAt !== undefined,
         truncated: repeatedAt === undefined && sequence.length >= maxTabStops,
         scope: modalOnly ? 'modal-only' : sequence.length ? 'document' : 'unknown',
+        journeys,
         ...(modalOnly && modalSelector ? { modalSelector } : {})
     };
 }
 async function runResponsiveChecks(page) {
-    const base = await page.evaluate(() => {
+    // Keyboard and disclosure checks can leave a long page scrolled beneath a sticky header.
+    // Reflow evidence must start from a deterministic position instead of reporting whatever
+    // happened to be under that header at the end of an earlier test.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(50);
+    const snapshot = (phase) => page.evaluate(({ currentPhase, focusables }) => {
         const cssPath = (element) => {
             if (element.id)
                 return `#${CSS.escape(element.id)}`;
@@ -151693,6 +151995,127 @@ async function runResponsiveChecks(page) {
             }
             return parts.join(' > ');
         };
+        const visible = (element) => {
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden' && style.contentVisibility !== 'hidden';
+        };
+        const carouselRootSelector = [
+            '[data-carousel]',
+            '[aria-roledescription="carousel" i]',
+            '.slick-slider',
+            '.js-slick-carousel',
+            '[class*="carousel" i]',
+            '[class*="slider" i]'
+        ].join(',');
+        const carouselSlideSelector = [
+            '.slick-slide',
+            '[data-carousel-slide]',
+            '[class*="carousel-slide" i]',
+            '[class~="slide" i]',
+            '[role="group"]'
+        ].join(',');
+        const verifiedCarouselRoot = (element) => {
+            let root = element;
+            while (root) {
+                if (root.matches(carouselRootSelector) && root.querySelectorAll(carouselSlideSelector).length >= 2)
+                    return root;
+                root = root.parentElement;
+            }
+            return null;
+        };
+        const isIntentionalCarouselViewport = (element) => verifiedCarouselRoot(element) === element;
+        const isIntentionallyVisuallyHidden = (element) => {
+            const node = element;
+            const style = getComputedStyle(node);
+            const rect = node.getBoundingClientRect();
+            const clippedOut = style.clip === 'rect(0px, 0px, 0px, 0px)'
+                || /^inset\((?:50%|100%)(?:\s+(?:50%|100%)){0,3}\)$/i.test(style.clipPath);
+            const tinyClippedBox = rect.width <= 2
+                && rect.height <= 2
+                && /^(absolute|fixed)$/.test(style.position)
+                && /^(hidden|clip)$/.test(style.overflow)
+                && (style.whiteSpace === 'nowrap' || clippedOut);
+            const authoredHiddenClass = /(?:^|[\s_-])(?:sr-only|screen-reader-only|visually-hidden)(?:$|[\s_-])/i.test(typeof node.className === 'string' ? node.className : '');
+            return clippedOut || (tinyClippedBox && authoredHiddenClass);
+        };
+        const usesOffscreenTextReplacement = (element) => {
+            const node = element;
+            const style = getComputedStyle(node);
+            const textIndent = Number.parseFloat(style.textIndent);
+            return Number.isFinite(textIndent)
+                && Math.abs(textIndent) >= 1_000
+                && /^(hidden|clip)$/.test(style.overflowX);
+        };
+        const isMeaningfulClippedNode = (element) => {
+            if (element.closest('[hidden], [inert], [aria-hidden="true"], .slick-cloned:not(.slick-active)'))
+                return false;
+            if (verifiedCarouselRoot(element))
+                return false;
+            if (isIntentionallyVisuallyHidden(element) || usesOffscreenTextReplacement(element))
+                return false;
+            if (element.matches(focusables))
+                return true;
+            if (element instanceof HTMLImageElement) {
+                // A cover image is deliberately cropped by its viewport; its accessible alternative
+                // remains available, so the crop alone is not lost or clipped content.
+                if (getComputedStyle(element).objectFit === 'cover' && !element.closest(focusables))
+                    return false;
+                return element.alt.trim().length > 0;
+            }
+            if (element instanceof HTMLVideoElement
+                || element instanceof HTMLCanvasElement
+                || element instanceof HTMLObjectElement
+                || element instanceof HTMLIFrameElement)
+                return true;
+            if ((element.getAttribute('aria-label') ?? element.getAttribute('title') ?? '').trim())
+                return true;
+            return [...element.childNodes].some((node) => node instanceof Text && Boolean(node.textContent?.trim()));
+        };
+        const findMeaningfulClippedContent = (element, horizontal, vertical) => {
+            const node = element;
+            const containerRect = node.getBoundingClientRect();
+            const left = containerRect.left + node.clientLeft;
+            const top = containerRect.top + node.clientTop;
+            const right = left + node.clientWidth;
+            const bottom = top + node.clientHeight;
+            const candidates = [element, ...element.querySelectorAll('*')].slice(0, 1_000);
+            const crossesBoundary = (rect) => {
+                if (rect.width <= 0 || rect.height <= 0)
+                    return false;
+                return (horizontal && (rect.left < left - 2 || rect.right > right + 2))
+                    || (vertical && (rect.top < top - 2 || rect.bottom > bottom + 2));
+            };
+            for (const candidate of candidates) {
+                if (!isMeaningfulClippedNode(candidate))
+                    continue;
+                const selector = cssPath(candidate);
+                if (candidate.matches(focusables) && crossesBoundary(candidate.getBoundingClientRect())) {
+                    return { selector, kind: 'interactive' };
+                }
+                if (candidate instanceof HTMLImageElement && crossesBoundary(candidate.getBoundingClientRect())) {
+                    return { selector, kind: 'image' };
+                }
+                if ((candidate instanceof HTMLVideoElement
+                    || candidate instanceof HTMLCanvasElement
+                    || candidate instanceof HTMLObjectElement
+                    || candidate instanceof HTMLIFrameElement)
+                    && crossesBoundary(candidate.getBoundingClientRect()))
+                    return { selector, kind: 'media' };
+                if ((candidate.getAttribute('aria-label') ?? candidate.getAttribute('title') ?? '').trim()
+                    && crossesBoundary(candidate.getBoundingClientRect()))
+                    return { selector, kind: 'labelled' };
+                for (const child of candidate.childNodes) {
+                    if (!(child instanceof Text) || !child.textContent?.trim())
+                        continue;
+                    const range = document.createRange();
+                    range.selectNodeContents(child);
+                    if ([...range.getClientRects()].some(crossesBoundary))
+                        return { selector, kind: 'text' };
+                }
+            }
+            return null;
+        };
         const documentWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
         const overflowElements = [...document.body.querySelectorAll('*')]
             .map((element) => ({ element, rect: element.getBoundingClientRect() }))
@@ -151704,8 +152127,155 @@ async function runResponsiveChecks(page) {
             right: Math.round(rect.right * 10) / 10,
             width: Math.round(rect.width * 10) / 10
         }));
-        return { horizontalOverflow: Math.max(0, documentWidth - innerWidth), overflowElements };
+        const clippedElements = [...document.body.querySelectorAll('*')]
+            .filter(visible)
+            .filter((element) => !isIntentionalCarouselViewport(element))
+            .filter((element) => !isIntentionallyVisuallyHidden(element))
+            .filter((element) => !usesOffscreenTextReplacement(element))
+            .flatMap((element) => {
+            const node = element;
+            const style = getComputedStyle(node);
+            const horizontal = /^(hidden|clip)$/.test(style.overflowX) && node.scrollWidth > node.clientWidth + 2;
+            const vertical = /^(hidden|clip)$/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 2;
+            if (!horizontal && !vertical)
+                return [];
+            const clippedContent = findMeaningfulClippedContent(node, horizontal, vertical);
+            if (!clippedContent)
+                return [];
+            return [{
+                    selector: cssPath(node),
+                    axis: horizontal && vertical ? 'both' : horizontal ? 'horizontal' : 'vertical',
+                    phase: currentPhase,
+                    clientWidth: node.clientWidth,
+                    clientHeight: node.clientHeight,
+                    scrollWidth: node.scrollWidth,
+                    scrollHeight: node.scrollHeight,
+                    contentSelector: clippedContent.selector,
+                    contentKind: clippedContent.kind
+                }];
+        })
+            .slice(0, 50);
+        const interactive = [...document.querySelectorAll(focusables)].filter(visible).slice(0, 100);
+        const overlapPairs = [];
+        for (let firstIndex = 0; firstIndex < interactive.length && overlapPairs.length < 30; firstIndex += 1) {
+            const first = interactive[firstIndex];
+            const firstRect = first.getBoundingClientRect();
+            for (let secondIndex = firstIndex + 1; secondIndex < interactive.length && overlapPairs.length < 30; secondIndex += 1) {
+                const second = interactive[secondIndex];
+                if (first.contains(second) || second.contains(first))
+                    continue;
+                const secondRect = second.getBoundingClientRect();
+                const overlapLeft = Math.max(0, firstRect.left, secondRect.left);
+                const overlapTop = Math.max(0, firstRect.top, secondRect.top);
+                const overlapRight = Math.min(innerWidth, firstRect.right, secondRect.right);
+                const overlapBottom = Math.min(innerHeight, firstRect.bottom, secondRect.bottom);
+                const overlapWidth = overlapRight - overlapLeft;
+                const overlapHeight = overlapBottom - overlapTop;
+                if (overlapWidth <= 4 || overlapHeight <= 4)
+                    continue;
+                const overlapArea = overlapWidth * overlapHeight;
+                const smallerElementArea = Math.min(firstRect.width * firstRect.height, secondRect.width * secondRect.height);
+                const smallerElementOverlapPercent = smallerElementArea > 0 ? (overlapArea / smallerElementArea) * 100 : 0;
+                if (overlapArea < 64 || smallerElementOverlapPercent < 25)
+                    continue;
+                const insetX = Math.min(2, overlapWidth / 4);
+                const insetY = Math.min(2, overlapHeight / 4);
+                const samplePoints = [
+                    [overlapLeft + overlapWidth / 2, overlapTop + overlapHeight / 2],
+                    [overlapLeft + insetX, overlapTop + insetY],
+                    [overlapRight - insetX, overlapTop + insetY],
+                    [overlapLeft + insetX, overlapBottom - insetY],
+                    [overlapRight - insetX, overlapBottom - insetY]
+                ];
+                let firstOnTop = 0;
+                let secondOnTop = 0;
+                for (const [x, y] of samplePoints) {
+                    const topTarget = document.elementsFromPoint(x, y).find((candidate) => (candidate === first || first.contains(candidate) || candidate === second || second.contains(candidate)));
+                    if (topTarget === first || (topTarget && first.contains(topTarget)))
+                        firstOnTop += 1;
+                    else if (topTarget === second || (topTarget && second.contains(topTarget)))
+                        secondOnTop += 1;
+                }
+                const firstClearlyOccludes = firstOnTop >= 3 && secondOnTop === 0;
+                const secondClearlyOccludes = secondOnTop >= 3 && firstOnTop === 0;
+                if (!firstClearlyOccludes && !secondClearlyOccludes)
+                    continue;
+                const obscuredElementArea = firstClearlyOccludes
+                    ? secondRect.width * secondRect.height
+                    : firstRect.width * firstRect.height;
+                const obscuredElementOverlapPercent = obscuredElementArea > 0
+                    ? (overlapArea / obscuredElementArea) * 100
+                    : 0;
+                // A small control deliberately overlaid on a large linked card does not materially
+                // obscure the card. Measure the control underneath, not whichever control is smaller.
+                if (obscuredElementOverlapPercent < 25)
+                    continue;
+                const firstSelector = cssPath(first);
+                const secondSelector = cssPath(second);
+                overlapPairs.push({
+                    firstSelector,
+                    secondSelector,
+                    phase: currentPhase,
+                    overlapWidth: Math.round(overlapWidth * 10) / 10,
+                    overlapHeight: Math.round(overlapHeight * 10) / 10,
+                    overlapArea: Math.round(overlapArea * 10) / 10,
+                    smallerElementOverlapPercent: Math.round(smallerElementOverlapPercent * 10) / 10,
+                    obscuredElementOverlapPercent: Math.round(obscuredElementOverlapPercent * 10) / 10,
+                    obscuredSelector: firstClearlyOccludes ? secondSelector : firstSelector,
+                    occludingSelector: firstClearlyOccludes ? firstSelector : secondSelector,
+                    hitTestSampleCount: Math.max(firstOnTop, secondOnTop)
+                });
+            }
+        }
+        const visibleInteractiveElements = interactive.map((element) => {
+            const name = (element.getAttribute('aria-label')
+                ?? element.getAttribute('title')
+                ?? element.querySelector('img[alt]')?.getAttribute('alt')
+                ?? element.textContent
+                ?? '').replace(/\s+/g, ' ').trim();
+            const role = element.getAttribute('role') ?? element.tagName.toLowerCase();
+            const destination = element instanceof HTMLAnchorElement
+                ? element.href
+                : element instanceof HTMLInputElement
+                    ? element.type
+                    : '';
+            return {
+                selector: cssPath(element),
+                name,
+                semanticKey: [role, name.toLocaleLowerCase(), destination].join('|')
+            };
+        });
+        return {
+            horizontalOverflow: Math.max(0, documentWidth - innerWidth),
+            overflowElements,
+            clippedElements,
+            overlapPairs,
+            visibleInteractiveElements
+        };
+    }, { currentPhase: phase, focusables: focusableSelector });
+    const repeatedSnapshot = async (phase) => {
+        const first = await snapshot(phase);
+        await page.waitForTimeout(150);
+        const second = await snapshot(phase);
+        const clippingKey = (item) => (`${item.selector}|${item.axis}|${item.contentSelector ?? ''}`);
+        const secondClippingKeys = new Set(second.clippedElements.map(clippingKey));
+        const stableClippedElements = first.clippedElements
+            .filter((item) => secondClippingKeys.has(clippingKey(item)))
+            .map((item) => ({ ...item, repeatConfirmed: true }));
+        const overlapKey = (item) => (`${item.phase}|${[item.firstSelector, item.secondSelector].sort().join('|')}`);
+        const secondOverlapKeys = new Set(second.overlapPairs.map(overlapKey));
+        const stableOverlapPairs = first.overlapPairs.filter((item) => secondOverlapKeys.has(overlapKey(item)));
+        return { first, second, stableClippedElements, stableOverlapPairs };
+    };
+    const baseSamples = await repeatedSnapshot('default');
+    const base = baseSamples.second;
+    const textResizeStyle = await page.addStyleTag({
+        content: 'html { font-size: 200% !important; }'
     });
+    await page.waitForTimeout(100);
+    const resizedSamples = await repeatedSnapshot('text-resize-200');
+    const resized = resizedSamples.second;
+    await textResizeStyle.evaluate((element) => element.remove());
     const spacingStyle = await page.addStyleTag({
         content: `
       html body *:not(svg):not(svg *) {
@@ -151719,9 +152289,67 @@ async function runResponsiveChecks(page) {
     `
     });
     await page.waitForTimeout(100);
-    const textSpacingOverflow = await page.evaluate(() => Math.max(0, Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth));
+    const spacedSamples = await repeatedSnapshot('text-spacing');
+    const spaced = spacedSamples.second;
     await spacingStyle.evaluate((element) => element.remove());
-    return { ...base, textSpacingOverflow };
+    const sameInteractiveElement = (left, right) => left.selector === right.selector || (Boolean(left.semanticKey) && left.semanticKey === right.semanticKey);
+    const stableBaseline = baseSamples.first.visibleInteractiveElements.filter((element) => (baseSamples.second.visibleInteractiveElements.some((candidate) => sameInteractiveElement(element, candidate))));
+    const missingAfterStress = (stressedElements) => {
+        const remaining = [...stressedElements];
+        return stableBaseline.flatMap((element) => {
+            const matchIndex = remaining.findIndex((candidate) => sameInteractiveElement(element, candidate));
+            if (matchIndex >= 0) {
+                remaining.splice(matchIndex, 1);
+                return [];
+            }
+            return [{ selector: element.selector, name: element.name }];
+        });
+    };
+    const repeatConfirmedMissing = (firstStress, secondStress) => {
+        const secondMissing = new Set(missingAfterStress(secondStress).map((item) => item.selector));
+        return missingAfterStress(firstStress)
+            .filter((item) => secondMissing.has(item.selector))
+            .map((item) => ({ ...item, repeatConfirmed: true }));
+    };
+    const lostInteractiveElements = repeatConfirmedMissing(spacedSamples.first.visibleInteractiveElements, spacedSamples.second.visibleInteractiveElements);
+    const textResizeLostInteractiveElements = repeatConfirmedMissing(resizedSamples.first.visibleInteractiveElements, resizedSamples.second.visibleInteractiveElements);
+    const clippingKey = (item) => (item.selector);
+    const overlapKey = (item) => ([item.firstSelector, item.secondSelector].sort().join('|'));
+    const seenClipping = new Set();
+    const clippedElements = [
+        ...baseSamples.stableClippedElements,
+        ...resizedSamples.stableClippedElements,
+        ...spacedSamples.stableClippedElements
+    ].filter((item) => {
+        const key = clippingKey(item);
+        if (seenClipping.has(key))
+            return false;
+        seenClipping.add(key);
+        return true;
+    });
+    const seenOverlaps = new Set();
+    const overlapPairs = [
+        ...baseSamples.stableOverlapPairs,
+        ...resizedSamples.stableOverlapPairs,
+        ...spacedSamples.stableOverlapPairs
+    ].filter((item) => {
+        const key = overlapKey(item);
+        if (seenOverlaps.has(key))
+            return false;
+        seenOverlaps.add(key);
+        return true;
+    });
+    return {
+        completed: true,
+        horizontalOverflow: base.horizontalOverflow,
+        overflowElements: base.overflowElements,
+        textResizeOverflow: resized.horizontalOverflow,
+        textSpacingOverflow: spaced.horizontalOverflow,
+        clippedElements,
+        overlapPairs,
+        lostInteractiveElements,
+        textResizeLostInteractiveElements
+    };
 }
 function locatorDescription(locator) {
     return locator.evaluate((element) => {
@@ -152175,6 +152803,7 @@ function incompleteDisclosureResult(identity, error, partial = {}) {
         spaceAfterExpanded: null,
         controlledVisibleAfterSpace: null,
         spaceTestCompleted: false,
+        controlledFocusableCount: 0,
         firstTabSelector: null,
         tabEnteredControlledRegion: null,
         ...partial,
@@ -152255,14 +152884,39 @@ async function runDisclosureChecks(page) {
             const afterEnterState = entered.state;
             let tabEnteredControlledRegion = null;
             let firstTabSelector = null;
+            let controlledFocusableCount = 0;
             if (afterEnterState.focused
                 && afterEnterState.expanded === 'true'
                 && afterEnterState.controlledVisible === true
                 && afterEnterState.controls) {
                 const controlledIds = afterEnterState.controls.split(/\s+/).filter(Boolean);
-                const panelSelectors = controlledIds.map((id) => `#${id.replaceAll(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, '\\$1')}`);
-                const focusable = page.locator(panelSelectors.map((selector) => `${selector} ${focusableSelector}`).join(', '));
-                if ((await focusable.count()) > 0) {
+                controlledFocusableCount = await page.evaluate(({ ids, selector }) => {
+                    const renderedForKeyboard = (element) => {
+                        if (!(element instanceof HTMLElement) || element.tabIndex < 0)
+                            return false;
+                        // aria-hidden does not remove descendants from the browser's sequential
+                        // focus order; axe reports that separate exposure defect when applicable.
+                        if (element.closest('[hidden], [inert]'))
+                            return false;
+                        let current = element;
+                        while (current) {
+                            const style = getComputedStyle(current);
+                            if (style.display === 'none'
+                                || style.visibility === 'hidden'
+                                || style.visibility === 'collapse'
+                                || style.contentVisibility === 'hidden')
+                                return false;
+                            current = current.parentElement;
+                        }
+                        return true;
+                    };
+                    const candidates = ids.flatMap((id) => {
+                        const panel = document.getElementById(id);
+                        return panel ? [...panel.querySelectorAll(selector)] : [];
+                    });
+                    return new Set(candidates.filter(renderedForKeyboard)).size;
+                }, { ids: controlledIds, selector: focusableSelector });
+                if (controlledFocusableCount > 0) {
                     await page.keyboard.press('Tab');
                     const active = page.locator(':focus');
                     firstTabSelector = (await active.count()) ? (await locatorDescription(active)).selector : null;
@@ -152333,6 +152987,7 @@ async function runDisclosureChecks(page) {
                 beforeState,
                 afterEnterState,
                 ...(afterSpaceState ? { afterSpaceState } : {}),
+                controlledFocusableCount,
                 firstTabSelector,
                 tabEnteredControlledRegion,
                 ...(restorationError ? { restorationError } : {})
@@ -152460,6 +153115,348 @@ async function runTabChecks(page) {
     return results;
 }
 //# sourceMappingURL=browser-checks.js.map
+;// CONCATENATED MODULE: ./dist/audit/journey-checks.js
+function appliesTo(journey, requestedUrl, viewportName) {
+    return (!journey.urlIncludes || requestedUrl.includes(journey.urlIncludes))
+        && (!journey.viewports?.length || journey.viewports.includes(viewportName));
+}
+function requiredSelector(step) {
+    return !['url-contains', 'live-region-updated'].includes(step.expectation);
+}
+function expectedDescription(step) {
+    const target = step.selector ? ` ${step.selector}` : '';
+    const value = step.value
+        ? step.expectation === 'value-equals'
+            ? ` equal to “${step.value}”`
+            : ` containing “${step.value}”`
+        : '';
+    return `${step.expectation}${target}${value}`;
+}
+function journeyStepTarget(step) {
+    if ('selector' in step && step.selector)
+        return step.selector;
+    if (step.action === 'press')
+        return 'document keyboard';
+    if (step.action === 'wait')
+        return 'journey timer';
+    if (step.action === 'assert' && step.expectation === 'url-contains')
+        return 'document URL';
+    if (step.action === 'assert' && step.expectation === 'live-region-updated')
+        return 'page live regions';
+    return 'document';
+}
+function journeyStepExpected(step) {
+    if (step.action === 'focus')
+        return `Focus moves to and remains on ${step.selector}.`;
+    if (step.action === 'press') {
+        return `The ${step.key} key is dispatched${step.selector ? ` from ${step.selector}` : ''}.`;
+    }
+    if (step.action === 'type')
+        return `Configured text is entered in ${step.selector}.`;
+    if (step.action === 'wait')
+        return `The page remains available after waiting ${step.milliseconds} ms.`;
+    return `The page satisfies ${expectedDescription(step)}.`;
+}
+async function installLiveRegionObserver(page) {
+    await page.evaluate(() => {
+        const auditWindow = window;
+        auditWindow.__carlashubAuditLiveObserver?.disconnect();
+        auditWindow.__carlashubAuditLiveChanges = [];
+        const liveSelector = '[role="alert"], [role="status"], [role="log"], [aria-live]:not([aria-live="off"])';
+        const record = (element) => {
+            const live = element.matches(liveSelector) ? element : element.closest(liveSelector);
+            const text = live?.textContent?.replace(/\s+/g, ' ').trim();
+            if (text && live)
+                auditWindow.__carlashubAuditLiveChanges?.push({ text, element: live });
+        };
+        auditWindow.__carlashubAuditLiveObserver = new MutationObserver((records) => {
+            for (const mutation of records) {
+                if (mutation.target instanceof Element)
+                    record(mutation.target);
+                else if (mutation.target.parentElement)
+                    record(mutation.target.parentElement);
+                for (const node of mutation.addedNodes) {
+                    if (node instanceof Element) {
+                        record(node);
+                        node.querySelectorAll(liveSelector).forEach(record);
+                    }
+                }
+            }
+        });
+        auditWindow.__carlashubAuditLiveObserver.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: ['aria-live', 'role']
+        });
+    });
+}
+async function assertionMatches(page, step) {
+    return page.evaluate(({ expectation, selector, value }) => {
+        if (expectation === 'url-contains')
+            return typeof value === 'string' && location.href.includes(value);
+        if (expectation === 'live-region-updated') {
+            const changes = window.__carlashubAuditLiveChanges ?? [];
+            const target = selector ? document.querySelector(selector) : null;
+            const matchingChanges = target
+                ? changes.filter((change) => change.element === target)
+                : changes;
+            return value
+                ? matchingChanges.some((change) => change.text.includes(value))
+                : matchingChanges.length > 0;
+        }
+        if (!selector)
+            return false;
+        const element = document.querySelector(selector);
+        if (expectation === 'hidden') {
+            if (!element)
+                return true;
+            const style = getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style.display === 'none' || style.visibility === 'hidden' || style.contentVisibility === 'hidden'
+                || rect.width === 0 || rect.height === 0;
+        }
+        if (!element)
+            return false;
+        const visible = () => {
+            const style = getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none'
+                && style.visibility !== 'hidden' && style.contentVisibility !== 'hidden';
+        };
+        if (expectation === 'focused')
+            return document.activeElement === element;
+        if (expectation === 'visible')
+            return visible();
+        if (expectation === 'expanded')
+            return element.getAttribute('aria-expanded') === 'true';
+        if (expectation === 'collapsed')
+            return element.getAttribute('aria-expanded') === 'false';
+        if (expectation === 'pressed')
+            return element.getAttribute('aria-pressed') === 'true';
+        if (expectation === 'unpressed')
+            return element.getAttribute('aria-pressed') === 'false';
+        if (expectation === 'selected')
+            return element.getAttribute('aria-selected') === 'true';
+        if (expectation === 'checked') {
+            return element.getAttribute('aria-checked') === 'true'
+                || (element instanceof HTMLInputElement && element.checked);
+        }
+        if (expectation === 'unchecked') {
+            return element.getAttribute('aria-checked') === 'false'
+                || (element instanceof HTMLInputElement && !element.checked);
+        }
+        if (expectation === 'invalid') {
+            return element.getAttribute('aria-invalid') === 'true'
+                || (element.matches('input, select, textarea') && element.matches(':invalid'));
+        }
+        if (expectation === 'valid') {
+            return element.getAttribute('aria-invalid') !== 'true'
+                && (!element.matches('input, select, textarea') || element.matches(':valid'));
+        }
+        if (expectation === 'text-contains')
+            return typeof value === 'string' && (element.textContent ?? '').includes(value);
+        if (expectation === 'value-equals') {
+            return typeof value === 'string'
+                && (element instanceof HTMLInputElement
+                    || element instanceof HTMLTextAreaElement
+                    || element instanceof HTMLSelectElement)
+                && element.value === value;
+        }
+        return false;
+    }, { expectation: step.expectation, selector: step.selector, value: step.value });
+}
+async function executeAssertion(page, step) {
+    const timeoutMs = step.timeoutMs ?? 2_000;
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() <= deadline) {
+        if (await assertionMatches(page, step))
+            return true;
+        if (Date.now() >= deadline)
+            return false;
+        await page.waitForTimeout(Math.min(100, Math.max(1, deadline - Date.now())));
+    }
+    return false;
+}
+async function runConfiguredJourneyChecks(page, definitions, requestedUrl, viewportName, preparePage) {
+    const journeys = definitions.filter((journey) => appliesTo(journey, requestedUrl, viewportName));
+    const results = [];
+    for (const journey of journeys) {
+        const completedSteps = [];
+        const stepResults = [];
+        const selectors = new Set();
+        let assertionCount = 0;
+        let status = 'passed';
+        let detail = 'Every configured assertion produced the expected result.';
+        let failureStep;
+        let activeStepIndex = 0;
+        const recordStep = (index, step, stepStatus, observed) => {
+            stepResults.push({
+                index: index + 1,
+                action: step.action,
+                status: stepStatus,
+                target: journeyStepTarget(step),
+                expected: journeyStepExpected(step),
+                observed
+            });
+            if (stepStatus === 'failed' || stepStatus === 'inconclusive')
+                failureStep ??= index + 1;
+        };
+        try {
+            await page.goto(requestedUrl, { waitUntil: 'domcontentloaded' });
+            await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
+            await preparePage?.();
+            await installLiveRegionObserver(page);
+            for (const [index, step] of journey.steps.entries()) {
+                activeStepIndex = index;
+                if ('selector' in step && step.selector)
+                    selectors.add(step.selector);
+                if (step.action === 'focus') {
+                    const locator = page.locator(step.selector);
+                    if (await locator.count() === 0) {
+                        status = 'inconclusive';
+                        detail = `Configured focus target ${step.selector} was not found, so the journey could not complete.`;
+                        recordStep(index, step, 'inconclusive', detail);
+                        break;
+                    }
+                    try {
+                        await locator.first().focus();
+                    }
+                    catch {
+                        status = 'failed';
+                        detail = `Configured keyboard target ${step.selector} exists but could not receive focus.`;
+                        completedSteps.push(`Attempted to focus ${step.selector}`);
+                        recordStep(index, step, 'failed', detail);
+                        break;
+                    }
+                    if (!await locator.first().evaluate((element) => document.activeElement === element)) {
+                        status = 'failed';
+                        detail = `Configured keyboard target ${step.selector} exists but did not retain focus.`;
+                        completedSteps.push(`Attempted to focus ${step.selector}`);
+                        recordStep(index, step, 'failed', detail);
+                        break;
+                    }
+                    completedSteps.push(`Focused ${step.selector}`);
+                    recordStep(index, step, 'passed', `Focus moved to and remained on ${step.selector}.`);
+                }
+                else if (step.action === 'press') {
+                    if (step.selector) {
+                        const locator = page.locator(step.selector);
+                        if (await locator.count() === 0) {
+                            status = 'inconclusive';
+                            detail = `Configured key target ${step.selector} was not found, so the journey could not complete.`;
+                            recordStep(index, step, 'inconclusive', detail);
+                            break;
+                        }
+                        try {
+                            await locator.first().focus();
+                        }
+                        catch {
+                            status = 'failed';
+                            detail = `Configured keyboard target ${step.selector} exists but could not receive focus before ${step.key}.`;
+                            completedSteps.push(`Attempted to focus ${step.selector}`);
+                            recordStep(index, step, 'failed', detail);
+                            break;
+                        }
+                        if (!await locator.first().evaluate((element) => document.activeElement === element)) {
+                            status = 'failed';
+                            detail = `Configured keyboard target ${step.selector} exists but did not retain focus before ${step.key}.`;
+                            completedSteps.push(`Attempted to focus ${step.selector}`);
+                            recordStep(index, step, 'failed', detail);
+                            break;
+                        }
+                    }
+                    await page.keyboard.press(step.key);
+                    await page.waitForTimeout(50);
+                    completedSteps.push(`Pressed ${step.key}${step.selector ? ` on ${step.selector}` : ''}`);
+                    recordStep(index, step, 'passed', `The ${step.key} key was dispatched${step.selector ? ` from ${step.selector}` : ''}.`);
+                }
+                else if (step.action === 'type') {
+                    const locator = page.locator(step.selector);
+                    if (await locator.count() === 0) {
+                        status = 'inconclusive';
+                        detail = `Configured text field ${step.selector} was not found, so the journey could not complete.`;
+                        recordStep(index, step, 'inconclusive', detail);
+                        break;
+                    }
+                    await locator.first().fill(step.text);
+                    completedSteps.push(`Entered configured text in ${step.selector}`);
+                    recordStep(index, step, 'passed', `Configured text was entered in ${step.selector}.`);
+                }
+                else if (step.action === 'wait') {
+                    await page.waitForTimeout(step.milliseconds);
+                    completedSteps.push(`Waited ${step.milliseconds} ms`);
+                    recordStep(index, step, 'passed', `The page remained available after waiting ${step.milliseconds} ms.`);
+                }
+                else {
+                    assertionCount += 1;
+                    if (requiredSelector(step) && !step.selector) {
+                        status = 'inconclusive';
+                        detail = `The ${step.expectation} assertion requires a selector.`;
+                        recordStep(index, step, 'inconclusive', detail);
+                        break;
+                    }
+                    if (['url-contains', 'text-contains', 'value-equals'].includes(step.expectation) && step.value === undefined) {
+                        status = 'inconclusive';
+                        detail = `The ${step.expectation} assertion requires a value.`;
+                        recordStep(index, step, 'inconclusive', detail);
+                        break;
+                    }
+                    const matched = await executeAssertion(page, step);
+                    completedSteps.push(`Asserted ${expectedDescription(step)}`);
+                    if (!matched) {
+                        status = 'failed';
+                        detail = `Expected ${expectedDescription(step)}, but the expected state was not observed within ${step.timeoutMs ?? 2_000} ms.`;
+                        recordStep(index, step, 'failed', detail);
+                        break;
+                    }
+                    recordStep(index, step, 'passed', `Observed ${expectedDescription(step)} within ${step.timeoutMs ?? 2_000} ms.`);
+                }
+            }
+            if (status === 'passed' && assertionCount === 0) {
+                status = 'inconclusive';
+                detail = 'The configured journey performed actions but contained no assertion, so it did not establish an outcome.';
+            }
+        }
+        catch (error) {
+            status = 'inconclusive';
+            detail = `The configured journey could not complete: ${error instanceof Error ? error.message : String(error)}`;
+            const activeStep = journey.steps[activeStepIndex];
+            if (activeStep && !stepResults.some((step) => step.index === activeStepIndex + 1)) {
+                recordStep(activeStepIndex, activeStep, 'inconclusive', detail);
+            }
+        }
+        for (const [index, step] of journey.steps.entries()) {
+            if (!stepResults.some((result) => result.index === index + 1)) {
+                stepResults.push({
+                    index: index + 1,
+                    action: step.action,
+                    status: 'not-run',
+                    target: journeyStepTarget(step),
+                    expected: journeyStepExpected(step),
+                    observed: 'Not run because the journey stopped before this step.'
+                });
+            }
+        }
+        stepResults.sort((left, right) => left.index - right.index);
+        results.push({
+            id: journey.id,
+            title: journey.title,
+            status,
+            steps: completedSteps,
+            detail,
+            source: 'configured',
+            categories: journey.categories,
+            assertionCount,
+            selectors: [...selectors],
+            stepResults,
+            ...(failureStep === undefined ? {} : { failureStep })
+        });
+    }
+    return results;
+}
+//# sourceMappingURL=journey-checks.js.map
 ;// CONCATENATED MODULE: ./dist/audit/page-preparation.js
 const consentSurfaceSelector = [
     '#onetrust-banner-sdk',
@@ -152523,26 +153520,44 @@ async function visibleConsentSurfaces(frame) {
     }
     return result;
 }
+async function visibleConsentSurfacesAcrossPage(page) {
+    return (await Promise.all(page.frames().map(visibleConsentSurfaces))).flat();
+}
+async function waitForConsentSurfacesToClear(page, timeoutMs = 3_000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        if ((await visibleConsentSurfacesAcrossPage(page)).length === 0)
+            return true;
+        await page.waitForTimeout(100);
+    }
+    return (await visibleConsentSurfacesAcrossPage(page)).length === 0;
+}
 /** Returns a visible modal surface that would invalidate page-level interaction coverage. */
 async function detectInteractionBlocker(page) {
     for (const frame of page.frames()) {
-        const candidates = frame.locator([
-            '[role="dialog"][aria-modal="true"]',
-            '[role="alertdialog"]',
-            '[aria-modal="true"]',
-            '#system-ialert'
-        ].join(', '));
-        const count = Math.min(await candidates.count().catch(() => 0), 50);
+        const candidates = frame.locator('body *');
+        const count = Math.min(await candidates.count().catch(() => 0), 500);
         for (let index = 0; index < count; index += 1) {
             const candidate = candidates.nth(index);
             if (!(await candidate.isVisible().catch(() => false)))
                 continue;
             const details = await candidate.evaluate((element) => {
                 const rect = element.getBoundingClientRect();
-                const viewportCoverage = Math.max(0, Math.min(innerWidth, rect.right) - Math.max(0, rect.left))
+                const coveredArea = Math.max(0, Math.min(innerWidth, rect.right) - Math.max(0, rect.left))
                     * Math.max(0, Math.min(innerHeight, rect.bottom) - Math.max(0, rect.top));
                 const viewportArea = Math.max(1, innerWidth * innerHeight);
-                const role = element.getAttribute('role') || (element.id === 'system-ialert' ? 'dialog surface' : element.tagName.toLowerCase());
+                const roleAttribute = element.getAttribute('role') ?? '';
+                const semanticBlocker = ['dialog', 'alertdialog'].includes(roleAttribute)
+                    || element.getAttribute('aria-modal') === 'true'
+                    || element.id === 'system-ialert';
+                const style = getComputedStyle(element);
+                const hasPaintedBackdrop = style.backgroundColor !== 'rgba(0, 0, 0, 0)'
+                    && style.backgroundColor !== 'transparent';
+                const visualBlocker = ['fixed', 'sticky'].includes(style.position)
+                    && style.pointerEvents !== 'none'
+                    && coveredArea / viewportArea >= 0.85
+                    && (hasPaintedBackdrop || style.backdropFilter !== 'none');
+                const role = roleAttribute || (element.id === 'system-ialert' ? 'dialog surface' : element.tagName.toLowerCase());
                 const labelledBy = element.getAttribute('aria-labelledby');
                 const labelledText = labelledBy
                     ? labelledBy.split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? '').join(' ').replace(/\s+/g, ' ').trim()
@@ -152554,11 +153569,16 @@ async function detectInteractionBlocker(page) {
                 const selector = element.id
                     ? `#${CSS.escape(element.id)}`
                     : `${element.tagName.toLowerCase()}${[...element.classList].slice(0, 2).map((value) => `.${CSS.escape(value)}`).join('')}`;
-                return { selector, role, name, coversViewport: viewportCoverage / viewportArea >= 0.08 };
+                return {
+                    selector,
+                    role,
+                    name,
+                    qualifies: visualBlocker || (semanticBlocker && (coveredArea / viewportArea >= 0.08 || /dialog/i.test(role)))
+                };
             }).catch(() => null);
             if (!details)
                 continue;
-            if (!details.coversViewport && !/dialog/i.test(details.role))
+            if (!details.qualifies)
                 continue;
             return {
                 selector: details.selector,
@@ -152607,9 +153627,7 @@ async function dismissConsentBanner(page) {
                         }).catch(() => consentSurfaceSelector);
                         result.frameUrl = frame.url();
                         await button.click({ timeout: 3_000 });
-                        await page.waitForTimeout(400);
-                        const remaining = (await Promise.all(page.frames().map(visibleConsentSurfaces))).flat();
-                        result.dismissed = remaining.length === 0;
+                        result.dismissed = await waitForConsentSurfacesToClear(page);
                         return result;
                     }
                 }
@@ -152908,7 +153926,7 @@ function axeRemediation(violation) {
         'aria-command-name': 'Give the control a concise accessible name that describes its action. Prefer visible text; otherwise use aria-labelledby to reference visible text or aria-label when no visible label is available.',
         'button-name': 'Give the button concise visible text that describes its action. If the button is icon-only, provide one accessible name with aria-label or aria-labelledby.',
         'input-button-name': 'Set a meaningful value on the input button or replace it with a native button containing descriptive visible text.',
-        'link-name': 'Give the link concise visible text that describes its destination. For an image-only link, provide a meaningful image alternative or label the link once without duplicating its name.',
+        'link-name': 'Give the link concise text that remains exposed to the accessibility tree. Do not hide its only label with display:none, visibility:hidden, or aria-hidden. If a responsive breakpoint intentionally makes the link icon-only, add an equivalent aria-label or valid aria-labelledby reference.',
         'image-alt': 'Add concise alt text that communicates the image purpose. Use alt="" only when the image is decorative and contributes no information or function.',
         label: 'Add a persistent visible label and associate it with the form control using native label markup and matching for/id values. Use aria-labelledby only when an existing visible label must be referenced.',
         'color-contrast': 'Change the foreground colour, background colour, font size, or font weight so normal text reaches at least 4.5:1 contrast and large text reaches at least 3:1 in every affected state.',
@@ -152936,6 +153954,16 @@ function createSharedComponentKey(component, signature) {
 }
 function openingTagSignature(html) {
     return (html.trim().match(/^<[^>]+>/)?.[0] ?? html.trim()).replace(/\s+/g, ' ');
+}
+function linkNameDiagnostic(audit, node) {
+    const targetSelectors = new Set(node.target.map(normalizeComponent));
+    const match = audit.dom.emptyLinks.find((item) => (targetSelectors.has(normalizeComponent(item.selector))
+        || [...targetSelectors].some((target) => normalizeComponent(item.selector).endsWith(target))
+        || openingTagSignature(item.html) === openingTagSignature(node.html)));
+    if (!match?.excludedNameSources?.length)
+        return '';
+    const excluded = conciseList(match.excludedNameSources.map((source) => (`${source.selector} contains “${source.text}” but is excluded because ${source.reason}`)));
+    return `The source contains text, but it does not provide an accessible name at this viewport: ${excluded}.`;
 }
 function contrastDetails(failureSummary = '') {
     const actual = failureSummary.match(/contrast of\s+([\d.]+)/i)?.[1];
@@ -153011,9 +154039,77 @@ function assignmentForRule(ruleId) {
         return 'Mixed';
     return 'Development';
 }
+function checkIdForEvidence(ruleId, kind, detail) {
+    if (ruleId === 'page-unavailable')
+        return 'navigation';
+    if (ruleId === 'interaction-coverage-blocked')
+        return 'keyboard';
+    if (ruleId.startsWith('axe-'))
+        return 'axe';
+    if (ruleId.startsWith('disclosure-'))
+        return 'disclosures';
+    if (ruleId.startsWith('tabs-'))
+        return 'tabs';
+    if (ruleId.startsWith('keyboard-journey-')) {
+        try {
+            const journey = JSON.parse(detail);
+            return journey.source === 'configured' ? 'journeys' : 'keyboard';
+        }
+        catch {
+            return 'keyboard';
+        }
+    }
+    if (ruleId.startsWith('link-destination-') || ruleId === 'link-broken-destination')
+        return 'links';
+    if (ruleId.startsWith('responsive-') || ruleId.startsWith('text-spacing-') || ruleId.startsWith('text-resize-') || ruleId === 'horizontal-reflow-overflow')
+        return 'responsive';
+    if (kind === 'keyboard')
+        return 'keyboard';
+    if (kind === 'responsive')
+        return 'responsive';
+    if (kind === 'network')
+        return 'links';
+    return 'dom';
+}
+function evidenceState(checkId) {
+    if (checkId === 'responsive')
+        return 'responsive-stress-state';
+    if (['keyboard', 'disclosures', 'tabs', 'journeys'].includes(checkId))
+        return 'interaction-state';
+    return 'rendered-page-state';
+}
+function expectedForFinding(finding) {
+    const explicit = /(?:^|\n)Expected:\s*(.+?)(?:\n|$)/i.exec(finding.testing)?.[1]?.trim();
+    return explicit || finding.remediation;
+}
 function makeFinding(input) {
     const { identity, ...finding } = input;
-    return { ...finding, key: `${finding.ruleId}:${fingerprint(identity)}` };
+    const evidence = finding.evidence.map((item) => {
+        const checkId = checkIdForEvidence(finding.ruleId, item.kind, item.detail);
+        const target = item.selector || 'page';
+        const observationId = fingerprint(JSON.stringify([
+            checkId,
+            finding.ruleId,
+            item.pageUrl,
+            item.viewport ?? '',
+            evidenceState(checkId),
+            target,
+            item.detail
+        ]));
+        return {
+            ...item,
+            provenance: {
+                observationId,
+                checkId,
+                ruleId: finding.ruleId,
+                state: evidenceState(checkId),
+                target,
+                observed: item.detail,
+                expected: expectedForFinding(finding)
+            }
+        };
+    });
+    return { ...finding, evidence, key: `${finding.ruleId}:${fingerprint(identity)}` };
 }
 function axeFindings(audit) {
     return audit.axe.flatMap((violation) => {
@@ -153052,11 +154148,13 @@ function axeFindings(audit) {
                 return makeFinding({
                     identity: `color-contrast|${signature}`,
                     ruleId: 'axe-color-contrast',
-                    classification: 'confirmed',
-                    severity: severityFromAxe(violation.impact),
+                    classification: details ? 'confirmed' : 'review',
+                    severity: details ? severityFromAxe(violation.impact) : 'Advisory',
                     wcag: wcag.length ? wcag : ['1.4.3'],
-                    summary: 'Shared text colour treatment has insufficient contrast',
-                    issue: `The same rendered colour treatment is used by the listed text components and does not meet minimum contrast. ${actual}.`,
+                    summary: details ? 'Shared text colour treatment has insufficient contrast' : 'Text contrast result needs measurement review',
+                    issue: details
+                        ? `The same rendered colour treatment is used by the listed text components and does not meet minimum contrast. ${actual}.`
+                        : 'The automated engine returned a potential text contrast result without the complete rendered colour and ratio measurements required to confirm a failure.',
                     impact: axeUserImpact(violation.id),
                     testing: [
                         `1. Open the affected page at the ${audit.viewport.name} viewport.`,
@@ -153081,7 +154179,7 @@ function axeFindings(audit) {
                         screenshot: screenshotFor(audit, node.target[0])
                     })),
                     assignment: 'Mixed',
-                    effort: 'Medium',
+                    effort: details ? 'Medium' : 'Review',
                     translationRequired: 'No'
                 });
             });
@@ -153181,6 +154279,8 @@ function axeFindings(audit) {
         return [...groups.values()].map((group) => {
             const selectors = [...new Set(group.nodes.flatMap((node) => node.target.length ? node.target : ['page']))];
             const representative = group.nodes[0];
+            const nameDiagnostic = violation.id === 'link-name' ? linkNameDiagnostic(audit, representative) : '';
+            const issue = axeAccessibilityIssue(violation, representative.failureSummary);
             return makeFinding({
                 identity: `${violation.id}|${group.component}|${group.failure}`,
                 ruleId: `axe-${violation.id}`,
@@ -153188,9 +154288,9 @@ function axeFindings(audit) {
                 severity: severityFromAxe(violation.impact),
                 wcag: wcag.length ? wcag : ['Best Practice'],
                 summary: axeSummary(violation),
-                issue: axeAccessibilityIssue(violation, representative.failureSummary),
+                issue: nameDiagnostic ? `${issue} ${nameDiagnostic}` : issue,
                 impact: axeUserImpact(violation.id),
-                testing: axeTesting(violation, audit, conciseList(selectors, 8), representative.failureSummary),
+                testing: axeTesting(violation, audit, conciseList(selectors, 8), nameDiagnostic ? `${representative.failureSummary ?? ''} ${nameDiagnostic}`.trim() : representative.failureSummary),
                 remediation: `${axeRemediation(violation)} Retest the component in every affected state.`,
                 component: group.component,
                 sharedComponentKey: createSharedComponentKey(group.component, `${violation.id}|${group.failure}`),
@@ -153202,7 +154302,7 @@ function axeFindings(audit) {
                     pageUrl: audit.url,
                     viewport: audit.viewport.name,
                     selector: node.target.join(', '),
-                    detail: node.html,
+                    detail: [node.html, violation.id === 'link-name' ? linkNameDiagnostic(audit, node) : ''].filter(Boolean).join('\n'),
                     screenshot: screenshotFor(audit, node.target[0])
                 })),
                 assignment: assignmentForRule(violation.id),
@@ -153296,50 +154396,6 @@ function domFindings(audit) {
             assignment: 'QA',
             effort: 'Review',
             translationRequired: 'No'
-        }));
-    }
-    if (audit.dom.mainCount === 0) {
-        findings.push(makeFinding({
-            identity: 'main-landmark|page',
-            ruleId: 'missing-main-landmark',
-            classification: 'confirmed',
-            severity: 'Serious',
-            wcag: ['1.3.1', '2.4.1'],
-            summary: 'The page has no main landmark',
-            issue: 'No main element or role="main" was present.',
-            impact: 'Screen-reader users cannot move directly to the primary page content using landmark navigation.',
-            testing: 'The rendered DOM was queried for main and role="main" landmarks.',
-            remediation: 'Wrap the unique primary content in one semantic main element. Do not place repeated site chrome inside it.',
-            component: 'page structure',
-            urls: [audit.url],
-            viewports: [audit.viewport.name],
-            selectors: [],
-            evidence: [evidence('dom', undefined, 'main landmark count: 0')],
-            assignment: 'Development',
-            effort: 'Small',
-            translationRequired: 'No'
-        }));
-    }
-    if (audit.dom.h1Count !== 1) {
-        findings.push(makeFinding({
-            identity: 'heading-one|page',
-            ruleId: 'heading-one-review',
-            classification: 'review',
-            severity: 'Moderate',
-            wcag: ['1.3.1', '2.4.6'],
-            summary: 'Review the page-level heading structure',
-            issue: `The page contains ${audit.dom.h1Count} h1 elements. Automated counting cannot determine whether the hierarchy describes the content accurately.`,
-            impact: 'An unclear heading hierarchy can make content difficult to understand and navigate.',
-            testing: 'The rendered h1 elements were counted; heading meaning and hierarchy require content review.',
-            remediation: 'Provide a descriptive page-level heading and arrange subsequent headings in a logical hierarchy that reflects the page content.',
-            component: 'page headings',
-            urls: [audit.url],
-            viewports: [audit.viewport.name],
-            selectors: ['h1'],
-            evidence: [evidence('dom', 'h1', `h1 count: ${audit.dom.h1Count}`)],
-            assignment: 'Content',
-            effort: 'Small',
-            translationRequired: 'Review'
         }));
     }
     for (const item of audit.dom.missingAltImages) {
@@ -153443,8 +154499,13 @@ function domFindings(audit) {
     const axeEmptyControlSignatures = new Set(audit.axe
         .filter((violation) => axeEmptyControlRules.has(violation.id))
         .flatMap((violation) => violation.nodes.map((node) => openingTagSignature(node.html))));
+    const unlabeledFieldSelectors = new Set(audit.dom.unlabeledFields.map((item) => normalizeComponent(item.selector)));
+    const unlabeledFieldSignatures = new Set(audit.dom.unlabeledFields.map((item) => openingTagSignature(item.html)));
     for (const item of audit.dom.emptyNamedControls) {
         if (axeEmptyControlSignatures.has(openingTagSignature(item.html)))
+            continue;
+        if (unlabeledFieldSelectors.has(normalizeComponent(item.selector))
+            || unlabeledFieldSignatures.has(openingTagSignature(item.html)))
             continue;
         findings.push(makeFinding({
             identity: `empty-name|${normalizeComponent(item.selector)}`,
@@ -153568,26 +154629,138 @@ function domFindings(audit) {
             translationRequired: 'No'
         }));
     }
-    if (audit.responsive.textSpacingOverflow > Math.max(2, audit.responsive.horizontalOverflow + 2)) {
+    // Aggregate overflow during a stress phase is diagnostic evidence, not a WCAG
+    // failure: horizontal scrolling can be valid and a descendant can intentionally
+    // extend beyond a carousel or other two-dimensional region. Report default
+    // reflow clipping here; stress phases require a repeat-confirmed loss below.
+    for (const clipped of audit.responsive.clippedElements.filter((item) => item.phase === 'default')) {
+        const clippingConfirmed = clipped.repeatConfirmed === true && Boolean(clipped.contentSelector);
         findings.push(makeFinding({
-            identity: 'text-spacing|page',
-            ruleId: 'text-spacing-overflow',
-            classification: 'review',
+            identity: `responsive-clipped|${clipped.phase}|${normalizeComponent(clipped.selector)}`,
+            ruleId: 'responsive-content-clipped',
+            classification: clippingConfirmed ? 'confirmed' : 'review',
             severity: 'Moderate',
-            wcag: ['1.4.12'],
-            summary: 'Text-spacing overrides may cause content loss or overflow',
-            issue: `After applying WCAG text-spacing values, overflow increased to ${audit.responsive.textSpacingOverflow}px. Visual inspection is required to confirm clipping or overlap.`,
-            impact: 'People who increase spacing to read more comfortably may lose content or functionality.',
-            testing: 'WCAG text-spacing overrides were injected and page overflow was remeasured.',
-            remediation: 'Remove fixed heights and widths around text, allow wrapping, and test line, paragraph, letter, and word spacing together without clipping, overlap, or lost controls.',
-            component: 'page layout',
+            wcag: ['1.4.10'],
+            summary: `Content ${clippingConfirmed ? 'is' : 'may be'} clipped at the narrow viewport`,
+            issue: clippingConfirmed
+                ? `${clipped.contentSelector} (${clipped.contentKind ?? 'meaningful content'}) crossed the ${clipped.axis} clipping boundary of ${clipped.selector} in two settled samples.`
+                : `${clipped.selector} has ${clipped.axis} scroll dimensions larger than its visible box while its overflow styling can clip content.`,
+            impact: 'Users who zoom, reflow content, or increase text spacing may be unable to perceive content or reach functionality.',
+            testing: `At the ${clipped.phase} phase, the element measured ${clipped.clientWidth}×${clipped.clientHeight} CSS pixels with scroll dimensions ${clipped.scrollWidth}×${clipped.scrollHeight}.${clippingConfirmed ? ' A repeat sample reproduced the same clipped content and boundary.' : ''}`,
+            remediation: 'Allow content to wrap and containers to grow. If clipping is intentional, verify that no meaningful content or operable control is hidden at 320 CSS pixels and with WCAG text spacing.',
+            component: normalizeComponent(clipped.selector),
             urls: [audit.url],
             viewports: [audit.viewport.name],
-            selectors: [],
-            evidence: [evidence('responsive', undefined, `Text-spacing overflow: ${audit.responsive.textSpacingOverflow}px`)],
+            selectors: [clipped.selector],
+            evidence: [evidence('responsive', clipped.selector, JSON.stringify(clipped))],
             assignment: 'Development',
             effort: 'Medium',
-            translationRequired: 'No'
+            translationRequired: clippingConfirmed ? 'No' : 'Review'
+        }));
+    }
+    const overlapGroups = new Map();
+    for (const overlap of audit.responsive.overlapPairs) {
+        const legacyPair = [overlap.firstSelector, overlap.secondSelector].map(normalizeComponent).sort().join('|');
+        const affectedControl = overlap.obscuredSelector
+            ? normalizeComponent(overlap.obscuredSelector)
+            : legacyPair;
+        const groupKey = `${overlap.phase}|${affectedControl}`;
+        const group = overlapGroups.get(groupKey) ?? [];
+        group.push(overlap);
+        overlapGroups.set(groupKey, group);
+    }
+    for (const overlaps of overlapGroups.values()) {
+        const overlap = overlaps.reduce((largest, candidate) => (candidate.obscuredElementOverlapPercent ?? candidate.smallerElementOverlapPercent ?? candidate.overlapArea ?? 0)
+            > (largest.obscuredElementOverlapPercent ?? largest.smallerElementOverlapPercent ?? largest.overlapArea ?? 0)
+            ? candidate
+            : largest);
+        const selectors = [...new Set(overlaps.flatMap((item) => [item.firstSelector, item.secondSelector]))];
+        const obscuredSelector = overlap.obscuredSelector;
+        const occludingSelectors = [...new Set(overlaps.map((item) => item.occludingSelector).filter((selector) => Boolean(selector)))];
+        const criteria = overlap.phase === 'text-spacing'
+            ? ['1.4.10', '1.4.12']
+            : overlap.phase === 'text-resize-200' ? ['1.4.4', '1.4.10'] : ['1.4.10'];
+        const phaseLabel = overlap.phase === 'text-spacing'
+            ? ' after text spacing'
+            : overlap.phase === 'text-resize-200' ? ' after 200% text resize' : ' at the narrow viewport';
+        findings.push(makeFinding({
+            identity: `responsive-overlap|${overlap.phase}|${obscuredSelector ? normalizeComponent(obscuredSelector) : selectors.map(normalizeComponent).sort().join('|')}`,
+            ruleId: 'responsive-controls-overlap',
+            classification: 'review',
+            severity: 'Moderate',
+            wcag: criteria,
+            summary: `Interactive control may be obscured${phaseLabel}`,
+            issue: obscuredSelector
+                ? `${obscuredSelector} was underneath ${occludingSelectors.length === 1 ? occludingSelectors[0] : `${occludingSelectors.length} other controls`} at every sampled point in an overlap covering up to ${Math.round(overlap.obscuredElementOverlapPercent ?? overlap.smallerElementOverlapPercent ?? 0)}% of the obscured control. Human review must confirm whether this prevents perception, activation, or visible focus.`
+                : `${overlaps.length === 1 ? 'Two visible interactive elements overlap' : `${overlaps.length} related interactive-element overlaps were detected`} by up to ${overlap.overlapWidth}×${overlap.overlapHeight} CSS pixels. Review whether a control, label, or focus indicator is obscured.`,
+            impact: 'Overlapping controls can hide information, make a target difficult to activate, or obscure keyboard focus.',
+            testing: obscuredSelector
+                ? `Rendered intersections and browser hit-test stacking were sampled during the ${overlap.phase} reflow phase at ${audit.viewport.width} CSS pixels. The candidate was retained only because one control was consistently above the other at at least three sample points.`
+                : `Rendered bounds were compared during the ${overlap.phase} reflow phase at ${audit.viewport.width} CSS pixels.`,
+            remediation: 'Use responsive layout and wrapping so controls do not cover one another at narrow widths or after text spacing is increased.',
+            component: normalizeComponent(obscuredSelector ?? overlap.firstSelector),
+            urls: [audit.url],
+            viewports: [audit.viewport.name],
+            selectors,
+            evidence: overlaps.map((item) => evidence('responsive', item.obscuredSelector ?? item.firstSelector, JSON.stringify(item))),
+            assignment: 'Development',
+            effort: 'Medium',
+            translationRequired: 'Review'
+        }));
+    }
+    if (audit.responsive.lostInteractiveElements.length > 0) {
+        const lossConfirmed = audit.responsive.lostInteractiveElements.every((item) => item.repeatConfirmed === true);
+        const selectors = audit.responsive.lostInteractiveElements.map((item) => item.selector);
+        const normalizedSelectors = [...new Set(selectors.map(normalizeComponent))].sort();
+        const component = normalizedSelectors.length === 1 ? normalizedSelectors[0] : 'responsive layout';
+        findings.push(makeFinding({
+            identity: `text-spacing-lost-functionality|${normalizedSelectors.join('|')}`,
+            ruleId: 'text-spacing-functionality-lost',
+            classification: lossConfirmed ? 'confirmed' : 'review',
+            severity: 'Serious',
+            wcag: ['1.4.12'],
+            summary: `Interactive content ${lossConfirmed ? 'disappears' : 'may disappear'} after text spacing is increased`,
+            issue: `${audit.responsive.lostInteractiveElements.length} control(s) that were visible before the WCAG text-spacing override were no longer visibly rendered afterwards.`,
+            impact: 'People who increase text spacing may lose access to controls or functionality.',
+            testing: `Visible interactive elements were inventoried before and after applying the WCAG text-spacing values, then compared by stable selector.${lossConfirmed ? ' The loss was reproduced in two settled stress samples from a stable two-sample baseline.' : ''}`,
+            remediation: 'Remove fixed-height clipping and layout constraints so controls remain visible, readable, and operable with increased line, paragraph, word, and letter spacing.',
+            component,
+            sharedComponentKey: createSharedComponentKey(component, `text-spacing-functionality-lost|${normalizedSelectors.join('|')}`),
+            urls: [audit.url],
+            viewports: [audit.viewport.name],
+            selectors,
+            evidence: audit.responsive.lostInteractiveElements.map((item) => evidence('responsive', item.selector, `Previously visible control disappeared: ${item.name || 'unnamed control'}.`)),
+            assignment: 'Development',
+            effort: 'Medium',
+            translationRequired: lossConfirmed ? 'No' : 'Review'
+        }));
+    }
+    if ((audit.responsive.textResizeLostInteractiveElements?.length ?? 0) > 0) {
+        const lost = audit.responsive.textResizeLostInteractiveElements ?? [];
+        const lossConfirmed = lost.every((item) => item.repeatConfirmed === true);
+        const selectors = lost.map((item) => item.selector);
+        const normalizedSelectors = [...new Set(selectors.map(normalizeComponent))].sort();
+        const component = normalizedSelectors.length === 1 ? normalizedSelectors[0] : 'responsive layout';
+        findings.push(makeFinding({
+            identity: `text-resize-lost-functionality|${normalizedSelectors.join('|')}`,
+            ruleId: 'text-resize-functionality-lost',
+            classification: lossConfirmed ? 'confirmed' : 'review',
+            severity: 'Serious',
+            wcag: ['1.4.4', '1.4.10'],
+            summary: `Interactive content ${lossConfirmed ? 'disappears' : 'may disappear'} after text is resized to 200%`,
+            issue: `${lost.length} control(s) visible before the 200% text resize were no longer visibly rendered afterwards.`,
+            impact: 'People who enlarge text may lose access to controls or functionality.',
+            testing: `Visible interactive elements were inventoried before and after the 200% root text-size override, then compared by stable selector.${lossConfirmed ? ' The loss was reproduced in two settled stress samples from a stable two-sample baseline.' : ''}`,
+            remediation: 'Use relative sizing and flexible layouts so every control remains visible and operable when text is enlarged to 200%.',
+            component,
+            sharedComponentKey: createSharedComponentKey(component, `text-resize-functionality-lost|${normalizedSelectors.join('|')}`),
+            urls: [audit.url],
+            viewports: [audit.viewport.name],
+            selectors,
+            evidence: lost.map((item) => evidence('responsive', item.selector, `Previously visible control disappeared: ${item.name || 'unnamed control'}.`)),
+            assignment: 'Development',
+            effort: 'Medium',
+            translationRequired: lossConfirmed ? 'No' : 'Review'
         }));
     }
     const groupKeyboardItems = (items) => {
@@ -153621,6 +154794,68 @@ function domFindings(audit) {
             assignment: 'Development',
             effort: 'Medium',
             translationRequired: 'No'
+        }));
+    }
+    const outsideViewport = audit.keyboard.sequence.filter((item) => item.outsideViewport);
+    for (const [component, items] of groupKeyboardItems(outsideViewport)) {
+        const focusLossConfirmed = items.every((item) => item.outsideViewportConfirmed === true);
+        findings.push(makeFinding({
+            identity: `focus-outside-viewport|${component}`,
+            ruleId: 'keyboard-focus-outside-viewport',
+            classification: focusLossConfirmed ? 'confirmed' : 'review',
+            severity: 'Serious',
+            wcag: ['2.4.11'],
+            summary: `Keyboard focus ${focusLossConfirmed ? 'moves' : 'may move'} outside the visible viewport`,
+            issue: `Sequential focus reached ${items.length} element(s) whose rendered bounds were outside the visible viewport after focus settled.`,
+            impact: 'Keyboard users may lose track of focus and be unable to identify the currently active control.',
+            testing: `The deterministic keyboard traversal checked focused-element bounds after each Tab step; affected positions: ${items.map((item) => item.index).join(', ')}.${focusLossConfirmed ? ' Each affected focus target remained outside the viewport in a second settled sample.' : ''}`,
+            remediation: 'Scroll focused controls into view, remove hidden elements from the focus order, and ensure overlays do not separate visual and programmatic focus.',
+            component,
+            urls: [audit.url],
+            viewports: [audit.viewport.name],
+            selectors: items.map((item) => item.selector),
+            evidence: items.map((item) => evidence('keyboard', item.selector, `Focus position ${item.index} was outside the viewport.`)),
+            assignment: 'Development',
+            effort: 'Medium',
+            translationRequired: 'No'
+        }));
+    }
+    for (const journey of audit.keyboard.journeys.filter((item) => item.status === 'failed')) {
+        const isBypass = journey.id === 'bypass-blocks';
+        const configured = journey.source === 'configured';
+        const configuredCriteria = [
+            ...(journey.categories?.includes('keyboard') ? ['2.1.1', '2.4.3'] : []),
+            ...(journey.categories?.includes('forms') ? ['3.3.1', '3.3.2'] : []),
+            ...(journey.categories?.includes('interaction') ? ['4.1.2'] : []),
+            ...(journey.categories?.includes('dynamic-content') ? ['4.1.3'] : [])
+        ].filter((criterion, index, all) => all.indexOf(criterion) === index);
+        findings.push(makeFinding({
+            identity: `keyboard-journey|${journey.id}|${audit.url}`,
+            ruleId: `keyboard-journey-${journey.id}`,
+            classification: 'review',
+            severity: 'Serious',
+            wcag: configured ? (configuredCriteria.length ? configuredCriteria : ['2.1.1']) : [isBypass ? '2.4.1' : '2.4.3'],
+            summary: `${journey.title} did not produce the expected result`,
+            issue: journey.detail,
+            impact: configured
+                ? 'Users may be unable to complete the configured task or receive its expected state, validation, or status feedback.'
+                : isBypass
+                    ? 'Keyboard users may be forced to traverse repeated content before reaching the main page content.'
+                    : 'Keyboard users may encounter an unexpected or illogical focus sequence.',
+            testing: `Executed deterministic journey: ${journey.steps.join(' → ') || 'no completed steps'}.`,
+            remediation: configured
+                ? 'Repair the failed state transition or assertion, then rerun this journey and manually verify the equivalent task with keyboard and assistive technology.'
+                : isBypass
+                    ? 'Provide an operable bypass mechanism whose target exists, becomes visible, and receives or immediately precedes focus.'
+                    : 'Keep DOM and visual order aligned and ensure forward and reverse sequential navigation are predictable.',
+            component: configured ? 'configured user journey' : 'page keyboard journey',
+            urls: [audit.url],
+            viewports: [audit.viewport.name],
+            selectors: journey.selectors ?? [],
+            evidence: [evidence('keyboard', undefined, JSON.stringify(journey))],
+            assignment: 'Development',
+            effort: 'Medium',
+            translationRequired: 'Review'
         }));
     }
     const axeTargetSelectors = new Set(audit.axe
@@ -153750,7 +154985,9 @@ function domFindings(audit) {
                 translationRequired: 'No'
             }));
         }
-        const focusOrderReviews = completed.filter((item) => item.tabEnteredControlledRegion === false);
+        const focusOrderReviews = completed.filter((item) => (item.controlledFocusableCount !== undefined
+            && item.controlledFocusableCount > 0
+            && item.tabEnteredControlledRegion === false));
         if (focusOrderReviews.length) {
             findings.push(makeFinding({
                 identity: `disclosure-focus-order|${component}`,
@@ -153787,23 +155024,8 @@ function domFindings(audit) {
             effort: 'Medium',
             translationRequired: 'No'
         };
-        if (tab.error) {
-            findings.push(makeFinding({
-                ...common,
-                identity: `tabs-test-error|${component}`,
-                ruleId: 'tabs-test-incomplete',
-                classification: 'review',
-                severity: 'Moderate',
-                wcag: ['Best Practice'],
-                summary: 'Tab interaction test did not complete',
-                issue: tab.error,
-                impact: 'The automated result cannot establish whether the tab interaction works correctly.',
-                testing: 'The rendered tablist was exercised in an isolated browser, but the interaction raised an error.',
-                remediation: 'Stabilize the tab interaction and rerun the keyboard and relationship checks before deciding conformance.',
-                evidence: [evidence('keyboard', tab.selector, JSON.stringify(tab))]
-            }));
+        if (tab.error)
             continue;
-        }
         if (!tab.navigationMovedToTab) {
             const otherTabsKeyboardUnreachable = tab.tabbableCount <= 1;
             findings.push(makeFinding({
@@ -153875,17 +155097,20 @@ function domFindings(audit) {
         }
     }
     for (const table of audit.dom.tablesForReview) {
+        const tableConfirmed = table.classification === 'confirmed';
         findings.push(makeFinding({
             identity: `table-semantics|${normalizeComponent(table.selector)}`,
-            ruleId: 'table-semantics-review',
-            classification: 'review',
+            ruleId: tableConfirmed ? 'table-missing-headers' : 'table-semantics-review',
+            classification: tableConfirmed ? 'confirmed' : 'review',
             severity: 'Moderate',
             wcag: ['1.3.1'],
-            summary: 'Review table headers and name',
+            summary: tableConfirmed ? 'Data table has no header cells' : 'Review table semantics',
             issue: table.reason,
             impact: 'Screen-reader users may not understand the table purpose or the relationship between headers and data cells.',
-            testing: 'Rendered table markup was checked for header cells and a programmatic name.',
-            remediation: 'Use tables only for data, provide descriptive header cells with correct scope or headers relationships, and add a caption or other programmatic name when needed.',
+            testing: tableConfirmed
+                ? `Rendered table geometry and markup were checked. The table has ${table.rowCount ?? 'multiple'} rows and ${table.columnCount ?? 'multiple'} columns but no th elements.`
+                : 'Rendered table markup was checked for data-table header relationships.',
+            remediation: 'Use tables only for data and provide descriptive header cells with correct scope or headers relationships.',
             component: normalizeComponent(table.selector),
             sharedComponentKey: createSharedComponentKey(normalizeComponent(table.selector), table.reason),
             urls: [audit.url],
@@ -153894,7 +155119,7 @@ function domFindings(audit) {
             evidence: [evidence('dom', table.selector, table.reason)],
             assignment: 'Development',
             effort: 'Medium',
-            translationRequired: 'Review'
+            translationRequired: tableConfirmed ? 'No' : 'Review'
         }));
     }
     if (audit.dom.autoplayMedia.length) {
@@ -153925,10 +155150,47 @@ function domFindings(audit) {
 function findingsFromPage(page) {
     return page.viewports
         .filter((audit) => !audit.cancelled)
-        .flatMap((audit) => [...axeFindings(audit), ...domFindings(audit)].map((finding) => enrichComponent(finding, audit)));
+        .flatMap((audit) => {
+        const outcome = (checkId) => audit.collectionOutcomes?.find((item) => item.checkId === checkId);
+        const retainsEvidence = (finding) => finding.evidence.every((item) => {
+            const checkId = item.provenance?.checkId;
+            if (audit.interactionBlocker && checkId === 'responsive' && finding.classification !== 'blocker') {
+                return false;
+            }
+            if (!checkId || !audit.collectionOutcomes)
+                return true;
+            const status = outcome(checkId)?.status;
+            return status === 'completed'
+                || (finding.classification === 'blocker' && (status === 'failed' || status === 'blocked'));
+        });
+        return [...axeFindings(audit), ...domFindings(audit)]
+            .filter(retainsEvidence)
+            .map((finding) => enrichComponent(finding, audit));
+    });
 }
 //# sourceMappingURL=findings.js.map
 ;// CONCATENATED MODULE: ./dist/audit/coverage.js
+const ALL_COVERAGE_AREAS = [
+    'viewport-render',
+    'keyboard-only',
+    'focus-order-and-visibility',
+    'names-roles-states-relationships',
+    'structure-headings-landmarks',
+    'navigation-and-bypass',
+    'links-and-buttons',
+    'images-and-alternatives',
+    'forms-errors-and-validation',
+    'interactive-components',
+    'dynamic-content-and-status',
+    'zoom-text-spacing-and-responsive',
+    'contrast-and-non-colour-cues',
+    'motion-autoplay-and-controls',
+    'language-and-language-changes',
+    'page-title',
+    'broken-or-misleading-links',
+    'automated-axe',
+    'manual-assessment'
+];
 function assessment(area, status, detail) {
     return { area, status, detail };
 }
@@ -153937,8 +155199,7 @@ function affectingFindings(findings, audit) {
         && finding.viewports.includes(audit.viewport.name)));
 }
 function confirmed(findings, predicate) {
-    return findings.filter((finding) => ((finding.classification === 'confirmed' || finding.classification === 'blocker')
-        && predicate(finding)));
+    return findings.filter((finding) => finding.classification === 'confirmed' && predicate(finding));
 }
 function resultForFindings(area, findings, predicate, noFailureDetail) {
     const failures = confirmed(findings, predicate);
@@ -153948,31 +155209,11 @@ function resultForFindings(area, findings, predicate, noFailureDetail) {
 }
 function viewportCoverage(audit, findings) {
     const loaded = ((audit.status !== null && audit.status < 400)
-        || (/^(file|data):/i.test(audit.finalUrl) && audit.errors.length === 0));
+        || /^(file|data):/i.test(audit.finalUrl));
     if (!loaded) {
-        return [
-            assessment('viewport-render', 'confirmed-failed', `The page did not load successfully: HTTP ${audit.status ?? 'no response'}.`),
-            ...[
-                'keyboard-only',
-                'focus-order-and-visibility',
-                'names-roles-states-relationships',
-                'structure-headings-landmarks',
-                'navigation-and-bypass',
-                'links-and-buttons',
-                'images-and-alternatives',
-                'forms-errors-and-validation',
-                'interactive-components',
-                'dynamic-content-and-status',
-                'zoom-text-spacing-and-responsive',
-                'contrast-and-non-colour-cues',
-                'motion-autoplay-and-controls',
-                'language-and-language-changes',
-                'page-title',
-                'broken-or-misleading-links',
-                'automated-axe',
-                'manual-assessment'
-            ].map((area) => assessment(area, 'not-tested', 'The page-load failure prevented this check.'))
-        ];
+        return ALL_COVERAGE_AREAS.map((area) => assessment(area, 'not-tested', area === 'viewport-render'
+            ? `The page could not be tested because it did not load: HTTP ${audit.status ?? 'no response'}.`
+            : 'The page-load failure prevented this check.'));
     }
     const blocker = audit.interactionBlocker
         ?? (audit.keyboard.scope === 'modal-only'
@@ -153983,11 +155224,34 @@ function viewportCoverage(audit, findings) {
                 reason: 'Sequential focus remained inside one modal surface.'
             }
             : null);
+    const checkError = (prefix) => audit.errors.find((message) => message.startsWith(prefix));
+    const domError = checkError('DOM checks error:');
+    const keyboardError = checkError('Keyboard checks error:');
+    const configuredJourneyError = checkError('Configured journey checks error:');
+    const disclosureError = checkError('Disclosure checks error:');
+    const tabError = checkError('Tab checks error:');
+    const responsiveError = checkError('Responsive checks error:');
+    const responsiveComplete = audit.responsive.completed === true;
+    const contextError = checkError('Element context check error:');
+    const screenshotError = checkError('Screenshot check error:');
+    const journeyResults = audit.keyboard.journeys.map((journey) => `${journey.title}: ${journey.status}`).join('; ');
+    const configuredJourneys = audit.keyboard.journeys.filter((journey) => journey.source === 'configured');
+    const configuredByCategory = (category) => (configuredJourneys.filter((journey) => journey.categories?.includes(category)));
+    const configuredDetail = (category) => {
+        const matches = configuredByCategory(category);
+        return matches.length
+            ? matches.map((journey) => `${journey.title}: ${journey.status} (${journey.assertionCount ?? 0} assertion(s))`).join('; ')
+            : 'No configured journey covered this area.';
+    };
     const keyboardDetail = blocker
         ? `Interaction coverage was blocked by ${blocker.selector}: ${blocker.reason}`
-        : audit.keyboard.truncated
-            ? `The keyboard sequence reached its configured limit after ${audit.keyboard.sequence.length} controls.`
-            : `Automated Tab traversal recorded ${audit.keyboard.sequence.length} controls; complete task-based keyboard testing still requires manual review.`;
+        : keyboardError
+            ? `Keyboard checks did not complete: ${keyboardError.slice('Keyboard checks error:'.length).trim()}`
+            : audit.keyboard.truncated
+                ? `The keyboard sequence reached its configured limit after ${audit.keyboard.sequence.length} controls.`
+                : configuredJourneyError
+                    ? `Configured journeys did not complete: ${configuredJourneyError.slice('Configured journey checks error:'.length).trim()}`
+                    : `Deterministic forward/reverse and bypass journeys accompanied ${audit.keyboard.sequence.length} focus samples${journeyResults ? ` (${journeyResults})` : ''}; configured tasks add repeatable evidence, but complete keyboard testing still requires manual review.`;
     const relevant = affectingFindings(findings, audit);
     const autoplayPresent = audit.dom.autoplayMedia.length > 0;
     const axeStatus = !audit.axeRun.completed
@@ -153998,39 +155262,57 @@ function viewportCoverage(audit, findings) {
                 ? 'tested-inconclusive'
                 : 'confirmed-passed';
     return [
-        assessment('viewport-render', 'confirmed-passed', `The page returned HTTP ${audit.status ?? 'local document'} and the viewport audit started.`),
+        assessment('viewport-render', screenshotError || contextError ? 'tested-inconclusive' : 'confirmed-passed', screenshotError
+            ? `The page rendered, but visual evidence capture did not complete: ${screenshotError.slice('Screenshot check error:'.length).trim()}`
+            : contextError
+                ? `The page rendered, but element context collection did not complete: ${contextError.slice('Element context check error:'.length).trim()}`
+                : `The page returned HTTP ${audit.status ?? 'local document'} and the viewport audit started.`),
         assessment('keyboard-only', 'tested-inconclusive', keyboardDetail),
         assessment('focus-order-and-visibility', 'tested-inconclusive', blocker
             ? keyboardDetail
             : 'Automated focus samples were collected, but complete order, visibility, obscuration and task operation require manual verification.'),
-        resultForFindings('names-roles-states-relationships', relevant, (finding) => finding.wcag.includes('4.1.2') || /name|role|state|relationship|aria/i.test(finding.ruleId), 'Initial-state DOM, axe and selected interaction checks ran; unexercised states and assistive-technology output remain inconclusive.'),
-        resultForFindings('structure-headings-landmarks', relevant, (finding) => /heading|landmark|region|main|list|table/i.test(finding.ruleId), 'Initial headings and landmarks were inspected; semantic meaning and complete landmark navigation require manual review.'),
+        resultForFindings('names-roles-states-relationships', relevant, (finding) => finding.wcag.includes('4.1.2') || /name|role|state|relationship|aria/i.test(finding.ruleId), domError
+            ? `DOM checks did not complete: ${domError.slice('DOM checks error:'.length).trim()}`
+            : 'Initial-state DOM, axe and selected interaction checks ran; unexercised states and assistive-technology output remain inconclusive.'),
+        resultForFindings('structure-headings-landmarks', relevant, (finding) => /heading|landmark|region|main|list|table/i.test(finding.ruleId), domError
+            ? `DOM structure checks did not complete: ${domError.slice('DOM checks error:'.length).trim()}`
+            : 'Initial headings and landmarks were inspected; semantic meaning and complete landmark navigation require manual review.'),
         resultForFindings('navigation-and-bypass', relevant, (finding) => /navigation|skip|main-menu|focus-order/i.test(`${finding.ruleId} ${finding.componentName ?? ''}`), blocker
             ? keyboardDetail
-            : 'Navigation controls were included in structural and disclosure checks; a complete skip-link and keyboard journey remains inconclusive.'),
-        resultForFindings('links-and-buttons', relevant, (finding) => /link|button|command-name|control-no-name/i.test(finding.ruleId), 'Initial names and desktop same-origin destinations were checked; responsive-only, external and action-style controls remain incomplete.'),
-        resultForFindings('images-and-alternatives', relevant, (finding) => /image|alt/i.test(finding.ruleId), 'Image-alt presence was checked automatically; purpose, equivalence and decorative treatment require manual review.'),
-        resultForFindings('forms-errors-and-validation', relevant, (finding) => /form|field|label|error|validation/i.test(finding.ruleId), 'Initial field labels were inspected, but forms were not submitted with valid and invalid data; errors and status announcements are inconclusive.'),
+            : 'A deterministic bypass-blocks journey accompanied structural and disclosure checks; alternative bypass mechanisms and complete navigation still require review.'),
+        resultForFindings('links-and-buttons', relevant, (finding) => /link|button|command-name|control-no-name/i.test(finding.ruleId), domError
+            ? `DOM name checks did not complete: ${domError.slice('DOM checks error:'.length).trim()}`
+            : 'Initial names and desktop same-origin destinations were checked; responsive-only, external and action-style controls remain incomplete.'),
+        resultForFindings('images-and-alternatives', relevant, (finding) => /image|alt/i.test(finding.ruleId), domError
+            ? `DOM image checks did not complete: ${domError.slice('DOM checks error:'.length).trim()}`
+            : 'Image-alt presence was checked automatically; purpose, equivalence and decorative treatment require manual review.'),
+        resultForFindings('forms-errors-and-validation', relevant, (finding) => /form|field|label|error|validation/i.test(finding.ruleId), domError
+            ? `DOM form checks did not complete: ${domError.slice('DOM checks error:'.length).trim()}`
+            : `${configuredDetail('forms')} Initial field labels were inspected; only the explicitly configured form states were submitted or asserted, and human review remains required.`),
         resultForFindings('interactive-components', relevant, (finding) => /disclosure|tabs|dialog|menu|carousel|filter/i.test(`${finding.ruleId} ${finding.component}`), blocker
             ? keyboardDetail
-            : 'Disclosures and tab patterns were sampled; every open/closed/validated state and other widget pattern still requires completion.'),
-        assessment('dynamic-content-and-status', 'not-tested', 'No complete status-message or asynchronous-update announcement test was recorded.'),
-        resultForFindings('zoom-text-spacing-and-responsive', relevant, (finding) => /reflow|overflow|text-spacing/i.test(finding.ruleId), 'Viewport width and document overflow were measured, but 200% zoom and visual clipping/overlap/loss require manual review.'),
+            : disclosureError || tabError
+                ? `Interactive component checks did not complete: ${(disclosureError ?? tabError)?.replace(/^(?:Disclosure|Tab) checks error:\s*/, '')}`
+                : `${configuredDetail('interaction')} Disclosures and tab patterns were sampled; unconfigured widgets and assistive-technology behaviour remain inconclusive.`),
+        assessment('dynamic-content-and-status', configuredByCategory('dynamic-content').length ? 'tested-inconclusive' : 'not-tested', `${configuredDetail('dynamic-content')} A DOM live-region mutation is evidence of an update, not proof that every screen reader announces it correctly.`),
+        resultForFindings('zoom-text-spacing-and-responsive', relevant, (finding) => /reflow|responsive|overflow|text-spacing/i.test(finding.ruleId), responsiveError
+            ? `Responsive checks did not complete: ${responsiveError.slice('Responsive checks error:'.length).trim()}`
+            : !responsiveComplete
+                ? 'Responsive checks did not produce complete evidence for the default, 200% root text-resize, and WCAG text-spacing phases; rerun the audit and complete human reflow and zoom review.'
+                : 'At 320 CSS pixels, overflow, clipping and interactive overlap were sampled in the default state, with a 200% root text resize, and with WCAG text spacing; browser zoom, permitted exceptions, and complete content loss still require human review.'),
         resultForFindings('contrast-and-non-colour-cues', relevant, (finding) => /contrast|use-of-color|colour/i.test(finding.ruleId), 'Axe inspected supported initial-state text contrast; non-text contrast, colour-only cues and all interaction states remain inconclusive.'),
         assessment('motion-autoplay-and-controls', autoplayPresent ? 'manual-review-required' : 'tested-inconclusive', autoplayPresent
             ? 'Autoplay media was detected; duration, audio, motion and pause/stop/hide controls require timed manual testing.'
             : 'No visible autoplay media attribute was detected; scripted/CSS motion, duration and controls remain inconclusive.'),
         assessment('language-and-language-changes', 'manual-review-required', 'Page and part-language accuracy requires content and assistive-technology review.'),
-        assessment('page-title', audit.title.trim() ? 'tested-inconclusive' : 'confirmed-failed', audit.title.trim()
+        resultForFindings('page-title', relevant, (finding) => /(?:document|page)-title/i.test(finding.ruleId), audit.title.trim()
             ? `The rendered document title was recorded as “${audit.title.trim()}”; whether it adequately identifies the page still requires review.`
-            : 'The rendered document title was empty.'),
-        assessment('broken-or-misleading-links', audit.viewport.name === 'desktop'
-            ? (confirmed(relevant, (finding) => finding.ruleId === 'link-broken-destination').length ? 'confirmed-failed' : 'tested-inconclusive')
-            : 'not-applicable', audit.viewport.name === 'desktop'
-            ? audit.linkRun.completed
+            : 'The rendered document title was empty, but no completed rule evidence established a confirmed failure.'),
+        audit.viewport.name === 'desktop'
+            ? resultForFindings('broken-or-misleading-links', relevant, (finding) => finding.ruleId === 'link-broken-destination', audit.linkRun.completed
                 ? `Checked ${audit.linkRun.checkedCount} of ${audit.linkRun.candidateCount} rendered link candidate(s). ${audit.linkRun.truncated ? 'The configured limit left candidates untested.' : 'External, destructive, download and non-HTTP destinations remain outside the automated scope.'}`
-                : `Destination checks did not complete: ${audit.linkRun.error ?? 'unknown reason'}.`
-            : 'Destination checks intentionally run once from the desktop DOM; this responsive viewport is not a separate link-check scope.'),
+                : `Destination checks did not complete: ${audit.linkRun.error ?? 'unknown reason'}.`)
+            : assessment('broken-or-misleading-links', 'not-applicable', 'Destination checks intentionally run once from the desktop DOM; this responsive viewport is not a separate link-check scope.'),
         assessment('automated-axe', axeStatus, audit.axeRun.completed
             ? `axe completed with ${audit.axeRun.violationCount} violation result(s), ${audit.axeRun.incompleteCount} incomplete result(s), and ${audit.axeRun.passCount} pass result(s). This status applies only to the executed axe rules and state.`
             : `axe did not complete: ${audit.axeRun.error ?? 'unknown error'}.`),
@@ -154047,9 +155329,551 @@ function buildCoverageMatrix(pages, findings) {
     }));
 }
 //# sourceMappingURL=coverage.js.map
+;// CONCATENATED MODULE: ./dist/reporting/finding-id.js
+function findingId(finding, index) {
+    return finding.id ?? `A11Y${String(index + 1).padStart(3, '0')}`;
+}
+function assignFindingIds(findings) {
+    return findings.map((finding, index) => ({
+        ...finding,
+        id: findingId(finding, index)
+    }));
+}
+//# sourceMappingURL=finding-id.js.map
+;// CONCATENATED MODULE: ./dist/audit/wcag-criteria.js
+
+const WCAG_CRITERIA_DEFINITIONS = [
+    ['1.1.1', 'A', 'Non-text Content', 'non-text-content'],
+    ['1.2.1', 'A', 'Audio-only and Video-only (Prerecorded)', 'audio-only-and-video-only-prerecorded'],
+    ['1.2.2', 'A', 'Captions (Prerecorded)', 'captions-prerecorded'],
+    ['1.2.3', 'A', 'Audio Description or Media Alternative (Prerecorded)', 'audio-description-or-media-alternative-prerecorded'],
+    ['1.2.4', 'AA', 'Captions (Live)', 'captions-live'],
+    ['1.2.5', 'AA', 'Audio Description (Prerecorded)', 'audio-description-prerecorded'],
+    ['1.2.6', 'AAA', 'Sign Language (Prerecorded)', 'sign-language-prerecorded'],
+    ['1.2.7', 'AAA', 'Extended Audio Description (Prerecorded)', 'extended-audio-description-prerecorded'],
+    ['1.2.8', 'AAA', 'Media Alternative (Prerecorded)', 'media-alternative-prerecorded'],
+    ['1.2.9', 'AAA', 'Audio-only (Live)', 'audio-only-live'],
+    ['1.3.1', 'A', 'Info and Relationships', 'info-and-relationships'],
+    ['1.3.2', 'A', 'Meaningful Sequence', 'meaningful-sequence'],
+    ['1.3.3', 'A', 'Sensory Characteristics', 'sensory-characteristics'],
+    ['1.3.4', 'AA', 'Orientation', 'orientation'],
+    ['1.3.5', 'AA', 'Identify Input Purpose', 'identify-input-purpose'],
+    ['1.3.6', 'AAA', 'Identify Purpose', 'identify-purpose'],
+    ['1.4.1', 'A', 'Use of Color', 'use-of-color'],
+    ['1.4.2', 'A', 'Audio Control', 'audio-control'],
+    ['1.4.3', 'AA', 'Contrast (Minimum)', 'contrast-minimum'],
+    ['1.4.4', 'AA', 'Resize Text', 'resize-text'],
+    ['1.4.5', 'AA', 'Images of Text', 'images-of-text'],
+    ['1.4.6', 'AAA', 'Contrast (Enhanced)', 'contrast-enhanced'],
+    ['1.4.7', 'AAA', 'Low or No Background Audio', 'low-or-no-background-audio'],
+    ['1.4.8', 'AAA', 'Visual Presentation', 'visual-presentation'],
+    ['1.4.9', 'AAA', 'Images of Text (No Exception)', 'images-of-text-no-exception'],
+    ['1.4.10', 'AA', 'Reflow', 'reflow'],
+    ['1.4.11', 'AA', 'Non-text Contrast', 'non-text-contrast'],
+    ['1.4.12', 'AA', 'Text Spacing', 'text-spacing'],
+    ['1.4.13', 'AA', 'Content on Hover or Focus', 'content-on-hover-or-focus'],
+    ['2.1.1', 'A', 'Keyboard', 'keyboard'],
+    ['2.1.2', 'A', 'No Keyboard Trap', 'no-keyboard-trap'],
+    ['2.1.3', 'AAA', 'Keyboard (No Exception)', 'keyboard-no-exception'],
+    ['2.1.4', 'A', 'Character Key Shortcuts', 'character-key-shortcuts'],
+    ['2.2.1', 'A', 'Timing Adjustable', 'timing-adjustable'],
+    ['2.2.2', 'A', 'Pause, Stop, Hide', 'pause-stop-hide'],
+    ['2.2.3', 'AAA', 'No Timing', 'no-timing'],
+    ['2.2.4', 'AAA', 'Interruptions', 'interruptions'],
+    ['2.2.5', 'AAA', 'Re-authenticating', 're-authenticating'],
+    ['2.2.6', 'AAA', 'Timeouts', 'timeouts'],
+    ['2.3.1', 'A', 'Three Flashes or Below Threshold', 'three-flashes-or-below-threshold'],
+    ['2.3.2', 'AAA', 'Three Flashes', 'three-flashes'],
+    ['2.3.3', 'AAA', 'Animation from Interactions', 'animation-from-interactions'],
+    ['2.4.1', 'A', 'Bypass Blocks', 'bypass-blocks'],
+    ['2.4.2', 'A', 'Page Titled', 'page-titled'],
+    ['2.4.3', 'A', 'Focus Order', 'focus-order'],
+    ['2.4.4', 'A', 'Link Purpose (In Context)', 'link-purpose-in-context'],
+    ['2.4.5', 'AA', 'Multiple Ways', 'multiple-ways'],
+    ['2.4.6', 'AA', 'Headings and Labels', 'headings-and-labels'],
+    ['2.4.7', 'AA', 'Focus Visible', 'focus-visible'],
+    ['2.4.8', 'AAA', 'Location', 'location'],
+    ['2.4.9', 'AAA', 'Link Purpose (Link Only)', 'link-purpose-link-only'],
+    ['2.4.10', 'AAA', 'Section Headings', 'section-headings'],
+    ['2.4.11', 'AA', 'Focus Not Obscured (Minimum)', 'focus-not-obscured-minimum'],
+    ['2.4.12', 'AAA', 'Focus Not Obscured (Enhanced)', 'focus-not-obscured-enhanced'],
+    ['2.4.13', 'AAA', 'Focus Appearance', 'focus-appearance'],
+    ['2.5.1', 'A', 'Pointer Gestures', 'pointer-gestures'],
+    ['2.5.2', 'A', 'Pointer Cancellation', 'pointer-cancellation'],
+    ['2.5.3', 'A', 'Label in Name', 'label-in-name'],
+    ['2.5.4', 'A', 'Motion Actuation', 'motion-actuation'],
+    ['2.5.5', 'AAA', 'Target Size (Enhanced)', 'target-size-enhanced'],
+    ['2.5.6', 'AAA', 'Concurrent Input Mechanisms', 'concurrent-input-mechanisms'],
+    ['2.5.7', 'AA', 'Dragging Movements', 'dragging-movements'],
+    ['2.5.8', 'AA', 'Target Size (Minimum)', 'target-size-minimum'],
+    ['3.1.1', 'A', 'Language of Page', 'language-of-page'],
+    ['3.1.2', 'AA', 'Language of Parts', 'language-of-parts'],
+    ['3.1.3', 'AAA', 'Unusual Words', 'unusual-words'],
+    ['3.1.4', 'AAA', 'Abbreviations', 'abbreviations'],
+    ['3.1.5', 'AAA', 'Reading Level', 'reading-level'],
+    ['3.1.6', 'AAA', 'Pronunciation', 'pronunciation'],
+    ['3.2.1', 'A', 'On Focus', 'on-focus'],
+    ['3.2.2', 'A', 'On Input', 'on-input'],
+    ['3.2.3', 'AA', 'Consistent Navigation', 'consistent-navigation'],
+    ['3.2.4', 'AA', 'Consistent Identification', 'consistent-identification'],
+    ['3.2.5', 'AAA', 'Change on Request', 'change-on-request'],
+    ['3.2.6', 'A', 'Consistent Help', 'consistent-help'],
+    ['3.3.1', 'A', 'Error Identification', 'error-identification'],
+    ['3.3.2', 'A', 'Labels or Instructions', 'labels-or-instructions'],
+    ['3.3.3', 'AA', 'Error Suggestion', 'error-suggestion'],
+    ['3.3.4', 'AA', 'Error Prevention (Legal, Financial, Data)', 'error-prevention-legal-financial-data'],
+    ['3.3.5', 'AAA', 'Help', 'help'],
+    ['3.3.6', 'AAA', 'Error Prevention (All)', 'error-prevention-all'],
+    ['3.3.7', 'A', 'Redundant Entry', 'redundant-entry'],
+    ['3.3.8', 'AA', 'Accessible Authentication (Minimum)', 'accessible-authentication-minimum'],
+    ['3.3.9', 'AAA', 'Accessible Authentication (Enhanced)', 'accessible-authentication-enhanced'],
+    ['4.1.2', 'A', 'Name, Role, Value', 'name-role-value'],
+    ['4.1.3', 'AA', 'Status Messages', 'status-messages']
+].map(([criterion, level, title, slug]) => ({ criterion, level, title, slug }));
+function wcag_criteria_criterionFromTag(tag) {
+    const match = /^wcag(\d)(\d)(\d+)$/.exec(tag.toLowerCase());
+    return match ? `${match[1]}.${match[2]}.${match[3]}` : undefined;
+}
+function axeEvidence(pages) {
+    const result = new Map();
+    const entry = (criterion) => {
+        const existing = result.get(criterion) ?? { passes: new Set(), incomplete: new Set() };
+        result.set(criterion, existing);
+        return existing;
+    };
+    for (const page of pages) {
+        for (const viewport of page.viewports) {
+            for (const pass of viewport.axeRun.passes) {
+                for (const tag of pass.tags) {
+                    const criterion = wcag_criteria_criterionFromTag(tag);
+                    if (criterion)
+                        entry(criterion).passes.add(`${pass.id} passed on ${page.url} (${viewport.viewport.name}; ${pass.nodeCount} node${pass.nodeCount === 1 ? '' : 's'})`);
+                }
+            }
+            for (const resultItem of viewport.axe.filter((item) => item.resultType === 'incomplete')) {
+                for (const tag of resultItem.tags) {
+                    const criterion = wcag_criteria_criterionFromTag(tag);
+                    if (criterion)
+                        entry(criterion).incomplete.add(`${resultItem.id} needs review on ${page.url} (${viewport.viewport.name})`);
+                }
+            }
+        }
+    }
+    return result;
+}
+function findingMap(findings) {
+    const result = new Map();
+    findings.forEach((finding, index) => {
+        const id = findingId(finding, index);
+        for (const criterion of finding.wcag)
+            result.set(criterion, [...(result.get(criterion) ?? []), { id, finding }]);
+    });
+    return result;
+}
+function buildWcagCriterionLedger(pages, findings, manualChecks, aaaAdvisory) {
+    const evidence = axeEvidence(pages);
+    const mappedFindings = findingMap(findings);
+    const manualCriteria = new Set(manualChecks.flatMap((check) => check.wcag));
+    return WCAG_CRITERIA_DEFINITIONS.map((definition) => {
+        const scope = definition.level === 'AAA' ? 'advisory' : 'standard';
+        if (definition.level === 'AAA' && !aaaAdvisory) {
+            return {
+                ...definition,
+                understandingUrl: `https://www.w3.org/WAI/WCAG22/Understanding/${definition.slug}.html`,
+                scope,
+                status: 'not-applicable',
+                findingIds: [],
+                automatedEvidence: [],
+                detail: 'AAA is outside the WCAG 2.2 AA conformance target; optional AAA advisory checks were not enabled.'
+            };
+        }
+        const related = mappedFindings.get(definition.criterion) ?? [];
+        const failed = related.filter(({ finding }) => finding.classification === 'confirmed');
+        const review = related.filter(({ finding }) => finding.classification === 'review' || finding.classification === 'blocker');
+        const axe = evidence.get(definition.criterion);
+        const automatedEvidence = [
+            ...(axe?.passes ?? []),
+            ...(axe?.incomplete ?? []),
+            ...related.map(({ id, finding }) => `${id}: ${finding.summary}`)
+        ].slice(0, 40);
+        if (failed.length) {
+            return {
+                ...definition,
+                understandingUrl: `https://www.w3.org/WAI/WCAG22/Understanding/${definition.slug}.html`,
+                scope,
+                status: 'failed',
+                findingIds: failed.map(({ id }) => id),
+                automatedEvidence,
+                detail: `${failed.length} evidence-backed finding${failed.length === 1 ? '' : 's'} mapped to this criterion; a human conformance decision remains required.`
+            };
+        }
+        const requiresManualReview = manualCriteria.has(definition.criterion);
+        return {
+            ...definition,
+            understandingUrl: `https://www.w3.org/WAI/WCAG22/Understanding/${definition.slug}.html`,
+            scope,
+            status: review.length || axe?.incomplete.size ? 'inconclusive' : requiresManualReview ? 'manual-review-required' : 'inconclusive',
+            findingIds: related.map(({ id }) => id),
+            automatedEvidence,
+            detail: review.length || axe?.incomplete.size
+                ? 'One or more automated or heuristic results need qualified human review.'
+                : requiresManualReview
+                    ? 'The mandatory manual test plan includes this criterion; record the reviewer decision before making a conformance claim.'
+                    : axe?.passes.size
+                        ? 'The implemented automated rules passed, but automated coverage alone does not establish criterion-level conformance.'
+                        : 'No complete machine-verifiable determination is available; assess applicability and outcome manually.'
+        };
+    });
+}
+function ledgerStatusCounts(criteria = []) {
+    return criteria.reduce((counts, criterion) => {
+        counts[criterion.status] = (counts[criterion.status] ?? 0) + 1;
+        return counts;
+    }, {});
+}
+//# sourceMappingURL=wcag-criteria.js.map
+;// CONCATENATED MODULE: ./dist/audit/quality-contract.js
+const AUDIT_QUALITY_CONTRACT_VERSION = '1.2.0';
+const WCAG_22_AA_CRITERION_COUNT = 55;
+const AUDIT_QUALITY_CONTRACT = {
+    version: AUDIT_QUALITY_CONTRACT_VERSION,
+    standard: 'WCAG 2.2',
+    conformanceTarget: 'A/AA',
+    criterionCount: WCAG_22_AA_CRITERION_COUNT,
+    findingPolicy: 'evidence-gated',
+    guarantees: [
+        'failure-isolation',
+        'traceable-evidence',
+        'lossless-deduplication',
+        'deterministic-output'
+    ]
+};
+const REQUIRED_GUARANTEES = new Set(AUDIT_QUALITY_CONTRACT.guarantees);
+const WCAG_CRITERION = /^\d\.\d\.\d{1,2}$/;
+function validEvidence(item) {
+    return Boolean(item.kind && item.pageUrl.trim() && item.detail.trim());
+}
+function confirmedFindingConfidenceFailures(finding) {
+    if (finding.classification !== 'confirmed')
+        return [];
+    const failures = [];
+    if (!finding.wcag.length || finding.wcag.some((criterion) => !WCAG_CRITERION.test(criterion))) {
+        failures.push('a valid WCAG criterion mapping');
+    }
+    if (!finding.urls.some((url) => url.trim()))
+        failures.push('an affected URL');
+    if (!finding.viewports.some((viewport) => viewport.trim()))
+        failures.push('a tested viewport');
+    if (!finding.selectors.some((selector) => selector.trim()))
+        failures.push('a reproducible locator');
+    if (!finding.testing.trim())
+        failures.push('reproduction steps');
+    if (!finding.evidence.length || finding.evidence.some((item) => !validEvidence(item))) {
+        failures.push('complete observed evidence');
+    }
+    if (finding.ruleId === 'axe-color-contrast') {
+        const evidence = finding.evidence.map((item) => item.detail).join('\n');
+        const hasMeasuredRatio = /contrast of\s+[\d.]+/i.test(evidence);
+        const hasRequiredRatio = /expected contrast ratio of\s+[\d.]+:1/i.test(evidence);
+        const hasColours = /foreground color:/i.test(evidence) && /background color:/i.test(evidence);
+        if (!hasMeasuredRatio || !hasRequiredRatio || !hasColours) {
+            failures.push('measured foreground, background, actual ratio, and required ratio');
+        }
+    }
+    return failures;
+}
+/**
+ * A confirmed row is an assertion of an observed failure, so it must satisfy the
+ * contract before criterion decisions and reports are created. Uncertain rows
+ * remain visible as review candidates and can never silently become failures.
+ */
+function applyConfirmedFindingConfidenceGate(findings) {
+    return findings.map((finding) => {
+        const failures = confirmedFindingConfidenceFailures(finding);
+        if (!failures.length)
+            return finding;
+        const gateNote = `Confidence gate: confirmation was withheld because the result lacks ${failures.join(', ')}. Verify it manually before treating it as a failure.`;
+        return {
+            ...finding,
+            classification: 'review',
+            severity: 'Advisory',
+            effort: 'Review',
+            testing: finding.testing.trim() ? `${finding.testing.trim()}\n${gateNote}` : gateNote
+        };
+    });
+}
+function assertAuditQualityContract(summary) {
+    const errors = [];
+    const standardCriteria = (summary.criteria ?? []).filter((criterion) => criterion.scope === 'standard');
+    const criterionIds = new Set(standardCriteria.map((criterion) => criterion.criterion));
+    const manualCriterionIds = new Set(summary.manualChecks.flatMap((check) => check.wcag));
+    if (summary.qualityContract?.version !== AUDIT_QUALITY_CONTRACT_VERSION)
+        errors.push('quality-contract version is missing or incorrect');
+    if (summary.qualityContract?.criterionCount !== WCAG_22_AA_CRITERION_COUNT)
+        errors.push('quality-contract criterion count is not 55');
+    const guarantees = new Set(summary.qualityContract?.guarantees ?? []);
+    for (const guarantee of REQUIRED_GUARANTEES) {
+        if (!guarantees.has(guarantee))
+            errors.push(`quality-contract guarantee ${guarantee} is missing`);
+    }
+    if (summary.conformanceTarget !== 'AA')
+        errors.push('conformance target is not WCAG 2.2 AA');
+    if (summary.humanAssessmentRequired !== true)
+        errors.push('mandatory human assessment is not declared');
+    if (summary.conformanceDecision !== 'not-determined')
+        errors.push('the automated run attempted a conformance decision');
+    if (standardCriteria.length !== WCAG_22_AA_CRITERION_COUNT || criterionIds.size !== WCAG_22_AA_CRITERION_COUNT) {
+        errors.push(`standard criterion ledger contains ${criterionIds.size} unique criteria instead of 55`);
+    }
+    if (manualCriterionIds.size !== WCAG_22_AA_CRITERION_COUNT) {
+        errors.push(`manual test plan maps ${manualCriterionIds.size} unique criteria instead of 55`);
+    }
+    for (const finding of summary.findings) {
+        const failures = confirmedFindingConfidenceFailures(finding);
+        if (failures.length)
+            errors.push(`${finding.id ?? finding.key} bypassed the confidence gate: ${failures.join(', ')}`);
+    }
+    const findingsById = new Map(summary.findings.map((finding) => [finding.id ?? finding.key, finding]));
+    for (const criterion of standardCriteria) {
+        if (criterion.status === 'passed')
+            errors.push(`${criterion.criterion} was marked passed by an automated audit`);
+        if (criterion.status === 'failed' && !criterion.findingIds.some((id) => findingsById.get(id)?.classification === 'confirmed')) {
+            errors.push(`${criterion.criterion} was marked failed without a confirmed finding`);
+        }
+    }
+    if (errors.length)
+        throw new Error(`Audit Quality Contract ${AUDIT_QUALITY_CONTRACT_VERSION} failed: ${errors.join('; ')}.`);
+}
+//# sourceMappingURL=quality-contract.js.map
+;// CONCATENATED MODULE: ./dist/audit/standards.js
+// Revised Section 508 E205.4 incorporates the WCAG 2.0 Level A and AA
+// success criteria for covered electronic content. WCAG 2.1/2.2 additions
+// must not be labelled as Section 508 requirements merely because they are
+// part of this tool's WCAG 2.2 conformance target.
+const SECTION_508_WCAG_20_AA = new Set([
+    '1.1.1',
+    '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5',
+    '1.3.1', '1.3.2', '1.3.3',
+    '1.4.1', '1.4.2', '1.4.3', '1.4.4', '1.4.5',
+    '2.1.1', '2.1.2',
+    '2.2.1', '2.2.2',
+    '2.3.1',
+    '2.4.1', '2.4.2', '2.4.3', '2.4.4', '2.4.5', '2.4.6', '2.4.7',
+    '3.1.1', '3.1.2',
+    '3.2.1', '3.2.2', '3.2.3', '3.2.4',
+    '3.3.1', '3.3.2', '3.3.3', '3.3.4',
+    '4.1.1', '4.1.2'
+]);
+const standards_WCAG_CRITERION = /^\d\.\d\.\d{1,2}$/;
+function standardsForFinding(finding) {
+    const criteria = [...new Set(finding.wcag.filter((criterion) => standards_WCAG_CRITERION.test(criterion)))].sort();
+    const standards = criteria.map((criterion) => `W3C WCAG 2.2 ${criterion}`);
+    for (const criterion of criteria) {
+        if (SECTION_508_WCAG_20_AA.has(criterion)) {
+            standards.push(`Section 508 E205.4 (WCAG 2.0 ${criterion})`);
+        }
+    }
+    if (finding.ruleId.startsWith('axe-')) {
+        standards.push(`Deque axe-core rule ${finding.ruleId.slice(4)}`);
+    }
+    return standards;
+}
+//# sourceMappingURL=standards.js.map
+;// CONCATENATED MODULE: ./dist/audit/canonical-validation.js
+const AUDIT_CHECK_IDS = [
+    'navigation',
+    'axe',
+    'dom',
+    'keyboard',
+    'disclosures',
+    'tabs',
+    'responsive',
+    'links',
+    'journeys',
+    'element-context',
+    'screenshots'
+];
+function hasGuarantee(summary, guarantee) {
+    return summary.qualityContract?.guarantees?.includes(guarantee) === true;
+}
+function outcomeErrors(outcome, label) {
+    const errors = [];
+    if (!Number.isInteger(outcome.observationCount) || outcome.observationCount < 0) {
+        errors.push(`${label} has an invalid observation count`);
+    }
+    if (outcome.status === 'completed' && (outcome.error || outcome.blockedBy)) {
+        errors.push(`${label} is completed but also records an error or blocker`);
+    }
+    if (outcome.status === 'failed' && (!outcome.error?.trim() || outcome.blockedBy)) {
+        errors.push(`${label} failed without exactly one explicit error`);
+    }
+    if (outcome.status === 'blocked' && (!outcome.blockedBy?.trim() || outcome.error)) {
+        errors.push(`${label} is blocked without exactly one explicit dependency`);
+    }
+    if ((outcome.status === 'not-applicable' || outcome.status === 'not-run') && (outcome.error || outcome.blockedBy)) {
+        errors.push(`${label} is ${outcome.status} but also records an error or blocker`);
+    }
+    if ((outcome.status === 'failed' || outcome.status === 'not-applicable' || outcome.status === 'not-run')
+        && outcome.observationCount !== 0) {
+        errors.push(`${label} is ${outcome.status} but records retained observations`);
+    }
+    return errors;
+}
+function collectionCompletenessErrors(pages) {
+    const errors = [];
+    for (const page of pages) {
+        if (!page.viewports.length)
+            errors.push(`${page.url} has no collected viewports`);
+        for (const viewport of page.viewports) {
+            const label = `${page.url} ${viewport.viewport.name}`;
+            const outcomes = viewport.collectionOutcomes;
+            if (!outcomes) {
+                errors.push(`${label} has no collector outcomes`);
+                continue;
+            }
+            const ids = outcomes.map((outcome) => outcome.checkId);
+            if (ids.length !== AUDIT_CHECK_IDS.length || new Set(ids).size !== AUDIT_CHECK_IDS.length
+                || AUDIT_CHECK_IDS.some((checkId) => !ids.includes(checkId))) {
+                errors.push(`${label} does not contain exactly one outcome for every collector`);
+            }
+            for (const outcome of outcomes)
+                errors.push(...outcomeErrors(outcome, `${label} ${outcome.checkId}`));
+            if (!viewport.cancelled && outcomes.some((outcome) => outcome.status === 'not-run')) {
+                errors.push(`${label} completed with one or more collectors still not-run`);
+            }
+        }
+    }
+    return errors;
+}
+/** Enforces collection completeness before raw observations enter classification. */
+function assertCollectionCompleteness(pages) {
+    const errors = collectionCompletenessErrors(pages);
+    if (errors.length)
+        throw new Error(`Audit collection is incomplete: ${errors.join('; ')}.`);
+}
+function viewportKey(pageUrl, viewportName) {
+    return JSON.stringify([pageUrl, viewportName]);
+}
+function viewportIndex(summary) {
+    const index = new Map();
+    for (const page of summary.pages) {
+        for (const viewport of page.viewports) {
+            for (const url of new Set([page.url, viewport.url, viewport.finalUrl])) {
+                if (url)
+                    index.set(viewportKey(url, viewport.viewport.name), viewport);
+            }
+        }
+    }
+    return index;
+}
+function validateFindingEvidence(finding, viewports) {
+    const label = finding.id ?? finding.key;
+    const errors = [];
+    if (!finding.evidence.length)
+        return [`${label} has no retained evidence`];
+    for (const [index, item] of finding.evidence.entries()) {
+        const evidenceLabel = `${label} evidence ${index + 1}`;
+        const provenance = item.provenance;
+        if (!provenance) {
+            errors.push(`${evidenceLabel} has no provenance`);
+            continue;
+        }
+        for (const [field, value] of Object.entries({
+            observationId: provenance.observationId,
+            ruleId: provenance.ruleId,
+            state: provenance.state,
+            target: provenance.target,
+            observed: provenance.observed,
+            expected: provenance.expected
+        })) {
+            if (!value.trim())
+                errors.push(`${evidenceLabel} has an empty provenance ${field}`);
+        }
+        if (provenance.observed !== item.detail) {
+            errors.push(`${evidenceLabel} observed value does not match its evidence detail`);
+        }
+        const viewportName = item.viewport ?? finding.viewports[0] ?? '';
+        const viewport = viewports.get(viewportKey(item.pageUrl, viewportName));
+        if (!viewport) {
+            errors.push(`${evidenceLabel} does not map to a collected page and viewport`);
+            continue;
+        }
+        const outcome = viewport.collectionOutcomes?.find((candidate) => candidate.checkId === provenance.checkId);
+        if (!outcome) {
+            errors.push(`${evidenceLabel} does not map to a collector outcome`);
+            continue;
+        }
+        const allowed = outcome.status === 'completed'
+            || (finding.classification === 'blocker' && (outcome.status === 'failed' || outcome.status === 'blocked'));
+        if (!allowed) {
+            errors.push(`${evidenceLabel} relies on a collector with status ${outcome.status}`);
+        }
+        else if (outcome.status === 'completed' && outcome.observationCount === 0) {
+            errors.push(`${evidenceLabel} relies on a completed collector that recorded no observations`);
+        }
+    }
+    return errors;
+}
+function validateJourneyResults(summary) {
+    const errors = [];
+    for (const page of summary.pages) {
+        for (const viewport of page.viewports) {
+            for (const journey of viewport.keyboard.journeys.filter((item) => item.source === 'configured')) {
+                const label = `${page.url} ${viewport.viewport.name} journey ${journey.id}`;
+                if (!journey.stepResults?.length) {
+                    errors.push(`${label} has no structured step results`);
+                    continue;
+                }
+                for (const [index, step] of journey.stepResults.entries()) {
+                    if (step.index !== index + 1)
+                        errors.push(`${label} has non-contiguous step indexes`);
+                    if (!step.target.trim() || !step.expected.trim() || !step.observed.trim()) {
+                        errors.push(`${label} step ${step.index} has incomplete evidence`);
+                    }
+                }
+                if (journey.status === 'failed' || journey.status === 'inconclusive') {
+                    const stoppedStep = journey.stepResults.find((step) => step.status === 'failed' || step.status === 'inconclusive');
+                    if (stoppedStep && journey.failureStep !== stoppedStep.index) {
+                        errors.push(`${label} does not identify its failure or incomplete step`);
+                    }
+                }
+            }
+        }
+    }
+    return errors;
+}
+/** Rejects impossible or untraceable canonical results before any renderer sees them. */
+function assertCanonicalAuditSummary(summary) {
+    const errors = [];
+    const findingIds = summary.findings.map((finding) => finding.id ?? finding.key);
+    if (new Set(findingIds).size !== findingIds.length)
+        errors.push('finding identities are not unique');
+    if (hasGuarantee(summary, 'failure-isolation')) {
+        errors.push(...collectionCompletenessErrors(summary.pages));
+    }
+    if (hasGuarantee(summary, 'traceable-evidence')) {
+        const viewports = viewportIndex(summary);
+        for (const finding of summary.findings)
+            errors.push(...validateFindingEvidence(finding, viewports));
+        errors.push(...validateJourneyResults(summary));
+    }
+    if (summary.regressionSummary) {
+        if (summary.regressionSummary.conformanceEvidence !== false)
+            errors.push('regression summary is incorrectly marked as conformance evidence');
+        if (summary.regressionSummary.fixtureCount < 0 || summary.regressionSummary.expectedFindingCount < 0) {
+            errors.push('regression summary contains a negative count');
+        }
+    }
+    if (errors.length)
+        throw new Error(`Canonical audit result is invalid: ${errors.join('; ')}.`);
+}
+//# sourceMappingURL=canonical-validation.js.map
 ;// CONCATENATED MODULE: ./dist/reporting/consolidate.js
 function uniqueSorted(values) {
     return [...new Set(values.filter(Boolean))].sort();
+}
+function evidenceIdentity(item) {
+    return JSON.stringify(item);
 }
 function conciseMergedText(first, second, limit = 6) {
     let hadTruncation = false;
@@ -154072,11 +155896,74 @@ function conciseMergedText(first, second, limit = 6) {
 function canonicalRule(ruleId) {
     if (['axe-image-alt', 'image-missing-alt'].includes(ruleId))
         return 'image-alt';
-    if (['axe-label', 'form-field-no-label'].includes(ruleId))
+    if (['axe-label', 'axe-select-name', 'axe-textarea-name', 'form-field-no-label'].includes(ruleId))
         return 'form-label';
-    if (['axe-button-name', 'axe-link-name', 'interactive-control-no-name'].includes(ruleId))
+    if (['axe-aria-command-name', 'axe-button-name', 'axe-input-button-name', 'axe-link-name', 'interactive-control-no-name'].includes(ruleId))
         return 'control-name';
     return ruleId;
+}
+function equivalentAxeDomFamily(ruleId) {
+    if (['axe-image-alt', 'image-missing-alt'].includes(ruleId))
+        return 'image-alt';
+    if (['axe-label', 'axe-select-name', 'axe-textarea-name', 'form-field-no-label'].includes(ruleId))
+        return 'form-label';
+    if (['axe-aria-command-name', 'axe-button-name', 'axe-input-button-name', 'axe-link-name', 'interactive-control-no-name'].includes(ruleId))
+        return 'control-name';
+    return null;
+}
+function normalizedSelector(selector) {
+    return selector.trim().replace(/\s+/g, ' ');
+}
+function normalizedEvidenceDetail(detail) {
+    return detail.trim().replace(/\s+/g, ' ');
+}
+function sharesRenderedElement(first, second) {
+    const firstSelectors = new Set(first.selectors.map(normalizedSelector));
+    if (second.selectors.some((selector) => firstSelectors.has(normalizedSelector(selector))))
+        return true;
+    return first.evidence.some((firstEvidence) => second.evidence.some((secondEvidence) => (firstEvidence.pageUrl === secondEvidence.pageUrl
+        && Boolean(normalizedEvidenceDetail(firstEvidence.detail))
+        && normalizedEvidenceDetail(firstEvidence.detail) === normalizedEvidenceDetail(secondEvidence.detail))));
+}
+function mergeEquivalentAxeDomFindings(findings) {
+    const working = findings.map((finding) => ({
+        ...finding,
+        wcag: [...finding.wcag],
+        urls: [...finding.urls],
+        viewports: [...finding.viewports],
+        selectors: [...finding.selectors],
+        evidence: [...finding.evidence]
+    }));
+    const consumed = new Set();
+    for (let axeIndex = 0; axeIndex < working.length; axeIndex += 1) {
+        const axe = working[axeIndex];
+        const family = axe.ruleId.startsWith('axe-') ? equivalentAxeDomFamily(axe.ruleId) : null;
+        if (!family)
+            continue;
+        for (let domIndex = 0; domIndex < working.length; domIndex += 1) {
+            if (domIndex === axeIndex || consumed.has(domIndex))
+                continue;
+            const dom = working[domIndex];
+            if (dom.ruleId.startsWith('axe-') || equivalentAxeDomFamily(dom.ruleId) !== family)
+                continue;
+            if (!axe.urls.some((url) => dom.urls.includes(url)))
+                continue;
+            if (!sharesRenderedElement(axe, dom))
+                continue;
+            const context = mergeFindingContext([axe, dom]);
+            axe.wcag = uniqueSorted([...axe.wcag, ...dom.wcag]);
+            axe.urls = context.urls;
+            axe.viewports = context.viewports;
+            axe.selectors = context.selectors;
+            axe.evidence = context.evidence;
+            if (context.componentName)
+                axe.componentName = context.componentName;
+            if (context.componentLocation)
+                axe.componentLocation = context.componentLocation;
+            consumed.add(domIndex);
+        }
+    }
+    return working.filter((_, index) => !consumed.has(index));
 }
 function rootCause(finding) {
     return JSON.stringify({
@@ -154094,10 +155981,12 @@ function mergeFindingContext(findings) {
         urls: uniqueSorted(findings.flatMap((finding) => finding.urls)),
         viewports: uniqueSorted(findings.flatMap((finding) => finding.viewports)),
         selectors: uniqueSorted(findings.flatMap((finding) => finding.selectors)),
-        evidence: [...new Map(findings.flatMap((finding) => finding.evidence).map((item) => [
-                JSON.stringify([item.kind, item.pageUrl, item.viewport ?? '', item.selector ?? '', item.detail, item.screenshot ?? '']),
-                item
-            ])).values()].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))
+        // Preserve every observed occurrence. Two byte-identical records can still
+        // represent two separately collected failures and must not disappear merely
+        // because their rendered evidence happens to match.
+        evidence: findings
+            .flatMap((finding) => finding.evidence)
+            .sort((a, b) => evidenceIdentity(a).localeCompare(evidenceIdentity(b)))
     };
     const componentName = findings.reduce((merged, finding) => conciseMergedText(merged, finding.componentName), undefined);
     const componentLocation = findings.reduce((merged, finding) => conciseMergedText(merged, finding.componentLocation), undefined);
@@ -154252,7 +156141,7 @@ function rollUpDescriptionListStructure(findings) {
             urls: uniqueSorted(grouped.flatMap((finding) => finding.urls)),
             viewports: uniqueSorted(grouped.flatMap((finding) => finding.viewports)),
             selectors: uniqueSorted(grouped.flatMap((finding) => finding.selectors)),
-            evidence: grouped.flatMap((finding) => finding.evidence),
+            evidence: mergeFindingContext(grouped).evidence,
             assignment: 'Development',
             effort: 'Small',
             translationRequired: 'No'
@@ -154274,7 +156163,7 @@ function consolidateFindings(findings) {
             existing.componentLocation = context.componentLocation;
     };
     const localFindings = new Map();
-    const ordered = [...findings].sort((a, b) => JSON.stringify([
+    const ordered = mergeEquivalentAxeDomFindings(findings).sort((a, b) => JSON.stringify([
         a.ruleId,
         a.key,
         uniqueSorted(a.urls),
@@ -154338,6 +156227,23 @@ function consolidateFindings(findings) {
             || uniqueSorted(a.urls).join('|').localeCompare(uniqueSorted(b.urls).join('|'));
     });
 }
+/** Ensures consolidation preserves the multiplicity of every evidence record. */
+function assertLosslessConsolidation(before, after) {
+    const countEvidence = (findings) => {
+        const counts = new Map();
+        for (const item of findings.flatMap((finding) => finding.evidence)) {
+            const identity = evidenceIdentity(item);
+            counts.set(identity, (counts.get(identity) ?? 0) + 1);
+        }
+        return counts;
+    };
+    const expected = countEvidence(before);
+    const retained = countEvidence(after);
+    const missing = [...expected.entries()].reduce((total, [identity, count]) => total + Math.max(0, count - (retained.get(identity) ?? 0)), 0);
+    if (missing) {
+        throw new Error(`Finding consolidation discarded ${missing} evidence observation occurrence(s).`);
+    }
+}
 function assertRemediationOnlyNotes(findings) {
     for (const finding of findings) {
         if (/jira/i.test(finding.remediation)) {
@@ -154349,6 +156255,41 @@ function assertRemediationOnlyNotes(findings) {
     }
 }
 //# sourceMappingURL=consolidate.js.map
+;// CONCATENATED MODULE: ./dist/reporting/json.js
+
+
+
+
+function portablePath(value, outputPath) {
+    if (!value)
+        return value;
+    const path = (0,external_node_path_.isAbsolute)(value) ? (0,external_node_path_.relative)((0,external_node_path_.dirname)(outputPath), value) : value;
+    return path.replaceAll('\\', '/');
+}
+function portableJsonSummary(summary, outputPath) {
+    const portable = structuredClone(summary);
+    portable.findings = assignFindingIds(portable.findings);
+    for (const page of portable.pages) {
+        for (const viewport of page.viewports) {
+            viewport.screenshot = portablePath(viewport.screenshot, outputPath);
+            for (const item of viewport.elementScreenshots)
+                item.path = portablePath(item.path, outputPath);
+        }
+    }
+    for (const finding of portable.findings) {
+        for (const evidence of finding.evidence) {
+            if (evidence.screenshot)
+                evidence.screenshot = portablePath(evidence.screenshot, outputPath);
+        }
+    }
+    return portable;
+}
+async function writeJsonReport(summary, outputPath) {
+    assertCanonicalAuditSummary(summary);
+    await (0,promises_.writeFile)(outputPath, `${JSON.stringify(portableJsonSummary(summary, outputPath), null, 2)}\n`, 'utf8');
+    return outputPath;
+}
+//# sourceMappingURL=json.js.map
 ;// CONCATENATED MODULE: ./dist/text.js
 function singleLineText(value, maxLength = Number.POSITIVE_INFINITY) {
     const visible = Array.from(value, (character) => {
@@ -154366,15 +156307,24 @@ var excel = __nccwpck_require__(59203);
 
 const urlPattern = /https?:\/\/[^\s<>'"\])}]+/gi;
 const stagingHostPattern = /(?:^|[.-])(?:dev|development|local|localhost|preview|qa|stage|staging|test|testing|uat)(?:[.\d-]|$)/i;
+function splitUrlListValue(value) {
+    return value
+        .trim()
+        .split(/\s+(?=https?:\/\/)/i)
+        .map((item) => item.trim())
+        .filter(Boolean);
+}
 function normalizeUrl(value) {
     try {
-        const parsed = new URL(value.trim());
+        const trimmed = value.trim();
+        if (/\s/.test(trimmed))
+            return null;
+        const parsed = new URL(trimmed);
         if (!['http:', 'https:'].includes(parsed.protocol))
             return null;
         if (parsed.username || parsed.password) {
             throw new Error('URLs containing embedded usernames or passwords are not supported.');
         }
-        parsed.hash = '';
         return parsed.toString();
     }
     catch (error) {
@@ -154466,6 +156416,12 @@ async function collectUrls(inputs, options = {}) {
     const found = [];
     const sources = [];
     for (const input of inputs) {
+        const expandedInputs = splitUrlListValue(input);
+        if (expandedInputs.length > 1) {
+            found.push(...expandedInputs);
+            sources.push('command line');
+            continue;
+        }
         const direct = normalizeUrl(input);
         if (direct) {
             found.push(direct);
@@ -154477,7 +156433,7 @@ async function collectUrls(inputs, options = {}) {
         }
         const filePath = (0,external_node_path_.resolve)(input);
         const extension = (0,external_node_path_.extname)(filePath).toLowerCase();
-        sources.push(filePath);
+        sources.push((0,external_node_path_.basename)(filePath));
         if (extension === '.xlsx') {
             found.push(...(await urlsFromWorkbook(filePath)));
             continue;
@@ -154519,9 +156475,19 @@ async function collectUrls(inputs, options = {}) {
 
 
 
+
+
+
+
+
+
+
 const CANCELLED_REASON = 'The audit was stopped by the user. Results include only work completed before cancellation.';
 const MAX_CAPTURED_RUNTIME_ERRORS = 50;
 const runner_require = (0,external_node_module_namespaceObject.createRequire)(import.meta.url);
+function isBrowserNetworkConsoleError(message) {
+    return /^Failed to load resource:\s+net::ERR_[A-Z0-9_]+$/i.test(message.trim());
+}
 function emptyDom() {
     return {
         h1Count: 0,
@@ -154537,6 +156503,21 @@ function emptyDom() {
         tablesForReview: [],
         autoplayMedia: []
     };
+}
+function domObservationCount(dom) {
+    return Object.values(dom).reduce((count, value) => count + (Array.isArray(value) ? value.length : 0), 0)
+        + (dom.h1Count === 1 ? 0 : 1)
+        + (dom.mainCount === 1 ? 0 : 1);
+}
+function responsiveObservationCount(responsive) {
+    return responsive.overflowElements.length
+        + responsive.clippedElements.length
+        + responsive.overlapPairs.length
+        + responsive.lostInteractiveElements.length
+        + (responsive.textResizeLostInteractiveElements?.length ?? 0)
+        + (responsive.horizontalOverflow > 2 ? 1 : 0)
+        + (responsive.textSpacingOverflow > Math.max(2, responsive.horizontalOverflow + 2) ? 1 : 0)
+        + ((responsive.textResizeOverflow ?? 0) > Math.max(2, responsive.horizontalOverflow + 2) ? 1 : 0);
 }
 async function emitProgress(execution, event) {
     try {
@@ -154835,7 +156816,31 @@ function emptyConsent() {
         frameUrl: ''
     };
 }
-async function auditViewport(browser, url, options, viewport, signal) {
+const defaultAuditViewportDependencies = {
+    runAxe,
+    runDomChecks: runDomChecks,
+    runKeyboardChecks: runKeyboardChecks,
+    runConfiguredJourneyChecks: runConfiguredJourneyChecks,
+    runDisclosureChecks: runDisclosureChecks,
+    runTabChecks: runTabChecks,
+    runResponsiveChecks: runResponsiveChecks,
+    runLinkChecks: runLinkChecks,
+    collectElementContexts: collectElementContexts,
+    captureElementScreenshots,
+    dismissConsentBanner: dismissConsentBanner,
+    detectInteractionBlocker: detectInteractionBlocker,
+    capturePageScreenshot: async (page, path) => {
+        await (0,promises_.mkdir)((0,external_node_path_.resolve)(path, '..'), { recursive: true });
+        await page.screenshot({ path, fullPage: true, animations: 'disabled', caret: 'hide' });
+    }
+};
+function isPartialAudit(errors, axeRun, blocker) {
+    return Boolean(blocker)
+        || !axeRun.completed
+        || errors.some((message) => /^(?:DOM|Keyboard|Configured journey|Disclosure|Tab|Responsive|Link|Element context|Screenshot) checks? error:/i.test(message));
+}
+async function auditViewport(browser, url, options, viewport, signal, dependencyOverrides = {}) {
+    const dependencies = { ...defaultAuditViewportDependencies, ...dependencyOverrides };
     const errors = [];
     let status = null;
     let finalUrl = url;
@@ -154861,14 +156866,50 @@ async function auditViewport(browser, url, options, viewport, signal) {
     let axeResults = [];
     let dom = emptyDom();
     let keyboard = {
-        sequence: [], completedCycle: false, truncated: false, scope: 'unknown'
+        sequence: [], completedCycle: false, truncated: false, scope: 'unknown', journeys: []
     };
     let responsive = {
-        horizontalOverflow: 0, overflowElements: [], textSpacingOverflow: 0
+        completed: false,
+        horizontalOverflow: 0,
+        overflowElements: [],
+        textSpacingOverflow: 0,
+        clippedElements: [],
+        overlapPairs: [],
+        lostInteractiveElements: []
     };
     let disclosures = [];
     let tabs = [];
     let links = [];
+    const checkIds = [
+        'navigation', 'axe', 'dom', 'keyboard', 'disclosures', 'tabs', 'responsive',
+        'links', 'journeys', 'element-context', 'screenshots'
+    ];
+    const collectionOutcomes = checkIds.map((checkId) => ({
+        checkId,
+        status: 'not-run',
+        observationCount: 0
+    }));
+    const recordOutcome = (checkId, outcome, onlyIfNotRun = false) => {
+        const index = collectionOutcomes.findIndex((item) => item.checkId === checkId);
+        if (onlyIfNotRun && collectionOutcomes[index]?.status !== 'not-run')
+            return;
+        collectionOutcomes[index] = { checkId, ...outcome };
+    };
+    const errorMessage = (error) => error instanceof Error ? error.message : String(error);
+    const blockPending = (checkIdsToBlock, blockedBy) => {
+        for (const checkId of checkIdsToBlock) {
+            recordOutcome(checkId, { status: 'blocked', observationCount: 0, blockedBy }, true);
+        }
+    };
+    if (viewport.name !== 'desktop') {
+        recordOutcome('links', { status: 'not-applicable', observationCount: 0 });
+    }
+    if (options.journeys.length === 0) {
+        recordOutcome('journeys', { status: 'not-applicable', observationCount: 0 });
+    }
+    if (!options.captureScreenshots) {
+        recordOutcome('screenshots', { status: 'not-applicable', observationCount: 0 });
+    }
     const screenshot = (0,external_node_path_.resolve)(options.outputDir, 'screenshots', `${safeSlug(url)}-${viewport.name}.png`);
     let context;
     const closeOnAbort = () => { void context?.close().catch(() => undefined); };
@@ -154898,8 +156939,10 @@ async function auditViewport(browser, url, options, viewport, signal) {
         };
         page.on('pageerror', (error) => captureRuntimeError(`Page error: ${error.message}`));
         page.on('console', (message) => {
-            if (message.type() === 'error')
-                captureRuntimeError(`Console error: ${message.text()}`);
+            const text = message.text();
+            if (message.type() === 'error' && !isBrowserNetworkConsoleError(text)) {
+                captureRuntimeError(`Console error: ${text}`);
+            }
         });
         let blockedNavigationReason = null;
         await page.route('**/*', async (route) => {
@@ -154920,7 +156963,19 @@ async function auditViewport(browser, url, options, viewport, signal) {
         });
         let response;
         try {
-            response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+            response = await page.goto(url, { waitUntil: 'commit' });
+            status = response?.status() ?? null;
+            try {
+                await page.waitForLoadState('domcontentloaded', { timeout: options.timeoutMs });
+            }
+            catch (error) {
+                const usableDocument = await page.evaluate(() => (document.readyState !== 'loading'
+                    && Boolean(document.body)
+                    && document.body.childElementCount > 0)).catch(() => false);
+                if (!usableDocument)
+                    throw error;
+                errors.push(`Navigation readiness observation: DOMContentLoaded was not observed, but the rendered document was available (${errorMessage(error)}).`);
+            }
         }
         catch (error) {
             if (blockedNavigationReason)
@@ -154932,7 +156987,6 @@ async function auditViewport(browser, url, options, viewport, signal) {
         // explicitly before treating the page as successfully loaded.
         if (blockedNavigationReason)
             throw new Error(blockedNavigationReason);
-        status = response?.status() ?? null;
         await page.waitForLoadState('networkidle', { timeout: Math.min(options.timeoutMs, 5_000) }).catch(() => undefined);
         finalUrl = page.url();
         const finalUrlRestriction = /^(file|data):/i.test(url) && finalUrl === url
@@ -154943,22 +156997,31 @@ async function auditViewport(browser, url, options, viewport, signal) {
             throw new Error(`Navigation blocked: ${finalUrlRestriction}`);
         }
         title = await page.title();
-        consent = await dismissConsentBanner(page);
+        recordOutcome('navigation', { status: 'completed', observationCount: 1 });
+        consent = await dependencies.dismissConsentBanner(page);
         if (consent.error)
             errors.push(`Consent handling error: ${consent.error}`);
-        if (consent.found && !consent.dismissed) {
-            errors.push('A visible consent banner could not be dismissed before accessibility interaction testing.');
+        interactionBlocker = await dependencies.detectInteractionBlocker(page);
+        if (!interactionBlocker && consent.found && !consent.dismissed) {
+            interactionBlocker = {
+                selector: consent.surfaceSelector || 'consent surface',
+                role: 'consent surface',
+                name: consent.buttonName ? `Consent choice: ${consent.buttonName}` : 'Visible consent surface',
+                reason: 'A visible consent surface remained active before page-level interaction tests.'
+            };
         }
-        interactionBlocker = await detectInteractionBlocker(page);
         if (interactionBlocker)
             errors.push(`${interactionBlocker.reason} ${interactionBlocker.selector}`);
         try {
-            const axeOutput = await runAxe(page, options.wcagLevel);
+            const axeOutput = await dependencies.runAxe(page, options.wcagLevel);
             axeResults = axeOutput.results;
             axeRun = axeOutput.metadata;
+            recordOutcome('axe', axeRun.completed
+                ? { status: 'completed', observationCount: axeResults.reduce((count, item) => count + item.nodes.length, 0) }
+                : { status: 'failed', observationCount: 0, error: axeRun.error || 'axe did not complete.' });
         }
         catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
+            const message = errorMessage(error);
             errors.push(`axe-core error: ${message}`);
             axeRun = {
                 completed: false,
@@ -154968,21 +157031,39 @@ async function auditViewport(browser, url, options, viewport, signal) {
                 passCount: 0,
                 passes: []
             };
+            recordOutcome('axe', { status: 'failed', observationCount: 0, error: message });
         }
         const axeTargetSizeSelectors = axeResults
             .filter((result) => result.id === 'target-size')
             .flatMap((result) => result.nodes.flatMap((node) => node.target));
         try {
-            dom = await runDomChecks(page, axeTargetSizeSelectors);
+            dom = await dependencies.runDomChecks(page, axeTargetSizeSelectors);
+            recordOutcome('dom', {
+                status: 'completed',
+                observationCount: domObservationCount(dom)
+            });
         }
         catch (error) {
-            errors.push(`DOM checks error: ${error instanceof Error ? error.message : String(error)}`);
+            const message = errorMessage(error);
+            errors.push(`DOM checks error: ${message}`);
+            recordOutcome('dom', { status: 'failed', observationCount: 0, error: message });
         }
-        try {
-            keyboard = await runKeyboardChecks(page, options.maxTabStops);
+        if (!interactionBlocker) {
+            try {
+                keyboard = await dependencies.runKeyboardChecks(page, options.maxTabStops);
+                recordOutcome('keyboard', {
+                    status: 'completed',
+                    observationCount: keyboard.sequence.length + keyboard.journeys.length
+                });
+            }
+            catch (error) {
+                const message = errorMessage(error);
+                errors.push(`Keyboard checks error: ${message}`);
+                recordOutcome('keyboard', { status: 'failed', observationCount: 0, error: message });
+            }
         }
-        catch (error) {
-            errors.push(`Keyboard checks error: ${error instanceof Error ? error.message : String(error)}`);
+        else {
+            recordOutcome('keyboard', { status: 'blocked', observationCount: 0, blockedBy: interactionBlocker.selector });
         }
         if (!interactionBlocker && keyboard.scope === 'modal-only') {
             interactionBlocker = {
@@ -154993,12 +157074,18 @@ async function auditViewport(browser, url, options, viewport, signal) {
             };
             errors.push(`${interactionBlocker.reason} ${interactionBlocker.selector}`);
         }
+        if (interactionBlocker) {
+            blockPending(['disclosures', 'tabs', 'links', 'journeys'], interactionBlocker.selector);
+        }
         if (!interactionBlocker) {
             try {
-                disclosures = await runDisclosureChecks(page);
+                disclosures = await dependencies.runDisclosureChecks(page);
+                recordOutcome('disclosures', { status: 'completed', observationCount: disclosures.length });
             }
             catch (error) {
-                errors.push(`Disclosure checks error: ${error instanceof Error ? error.message : String(error)}`);
+                const message = errorMessage(error);
+                errors.push(`Disclosure checks error: ${message}`);
+                recordOutcome('disclosures', { status: 'failed', observationCount: 0, error: message });
             }
         }
         for (const disclosure of disclosures.filter((item) => item.error)) {
@@ -155006,26 +157093,40 @@ async function auditViewport(browser, url, options, viewport, signal) {
         }
         if (!interactionBlocker) {
             try {
-                tabs = await runTabChecks(page);
+                tabs = await dependencies.runTabChecks(page);
+                recordOutcome('tabs', { status: 'completed', observationCount: tabs.length });
             }
             catch (error) {
-                errors.push(`Tab checks error: ${error instanceof Error ? error.message : String(error)}`);
+                const message = errorMessage(error);
+                errors.push(`Tab checks error: ${message}`);
+                recordOutcome('tabs', { status: 'failed', observationCount: 0, error: message });
             }
         }
         try {
-            responsive = await runResponsiveChecks(page);
+            responsive = await dependencies.runResponsiveChecks(page);
+            const responsiveCompleted = responsive.completed !== false;
+            recordOutcome('responsive', {
+                status: responsiveCompleted ? 'completed' : 'failed',
+                observationCount: responsiveCompleted ? responsiveObservationCount(responsive) : 0,
+                ...(!responsiveCompleted ? { error: 'Responsive phases did not all complete.' } : {})
+            });
         }
         catch (error) {
-            errors.push(`Responsive checks error: ${error instanceof Error ? error.message : String(error)}`);
+            const message = errorMessage(error);
+            errors.push(`Responsive checks error: ${message}`);
+            recordOutcome('responsive', { status: 'failed', observationCount: 0, error: message });
         }
         if (!interactionBlocker && viewport.name === 'desktop') {
             try {
-                const linkOutput = await runLinkChecks(page, options.maxLinksPerPage);
+                const linkOutput = await dependencies.runLinkChecks(page, options.maxLinksPerPage);
                 links = linkOutput.results;
                 linkRun = linkOutput.metadata;
+                recordOutcome('links', linkRun.completed
+                    ? { status: 'completed', observationCount: links.length }
+                    : { status: 'failed', observationCount: 0, error: linkRun.error || 'Link checks did not complete.' });
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
+                const message = errorMessage(error);
                 errors.push(`Link checks error: ${message}`);
                 linkRun = {
                     completed: false,
@@ -155035,6 +157136,7 @@ async function auditViewport(browser, url, options, viewport, signal) {
                     scope: 'desktop-same-origin',
                     error: message
                 };
+                recordOutcome('links', { status: 'failed', observationCount: 0, error: message });
             }
         }
         else if (interactionBlocker && viewport.name === 'desktop') {
@@ -155046,6 +157148,25 @@ async function auditViewport(browser, url, options, viewport, signal) {
                 scope: 'blocked',
                 error: `Link checks were blocked by ${interactionBlocker.selector}.`
             };
+        }
+        if (!interactionBlocker && options.journeys.length > 0) {
+            try {
+                const configuredJourneys = await dependencies.runConfiguredJourneyChecks(page, options.journeys, url, viewport.name, async () => {
+                    const journeyConsent = await dependencies.dismissConsentBanner(page);
+                    if (journeyConsent.error)
+                        throw new Error(`Consent handling failed: ${journeyConsent.error}`);
+                });
+                keyboard.journeys.push(...configuredJourneys);
+                recordOutcome('journeys', { status: 'completed', observationCount: configuredJourneys.length });
+                await page.goto(finalUrl, { waitUntil: 'domcontentloaded' });
+                await page.waitForLoadState('networkidle', { timeout: Math.min(options.timeoutMs, 5_000) }).catch(() => undefined);
+                await dependencies.dismissConsentBanner(page);
+            }
+            catch (error) {
+                const message = errorMessage(error);
+                errors.push(`Configured journey checks error: ${message}`);
+                recordOutcome('journeys', { status: 'failed', observationCount: 0, error: message });
+            }
         }
         if (signal?.aborted)
             throw new Error(CANCELLED_REASON);
@@ -155069,39 +157190,72 @@ async function auditViewport(browser, url, options, viewport, signal) {
             elementContexts: [],
             screenshot: '',
             elementScreenshots: [],
-            errors
+            errors,
+            collectionOutcomes
         };
         const allViewportFindings = findingsFromPage({ url, viewports: [preliminaryAudit] });
-        preliminaryAudit.elementContexts = await collectElementContexts(page, allViewportFindings.flatMap((finding) => finding.selectors));
+        try {
+            preliminaryAudit.elementContexts = await dependencies.collectElementContexts(page, allViewportFindings.flatMap((finding) => finding.selectors));
+            recordOutcome('element-context', {
+                status: 'completed',
+                observationCount: preliminaryAudit.elementContexts.length
+            });
+        }
+        catch (error) {
+            const message = errorMessage(error);
+            errors.push(`Element context check error: ${message}`);
+            recordOutcome('element-context', { status: 'failed', observationCount: 0, error: message });
+        }
         const screenshotFindings = allViewportFindings
             .filter((finding) => finding.classification !== 'manual');
         if (options.captureScreenshots && screenshotFindings.length > 0) {
             await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => undefined);
             await page.waitForLoadState('networkidle', { timeout: Math.min(options.timeoutMs, 5_000) }).catch(() => undefined);
-            const captureConsent = await dismissConsentBanner(page);
-            const captureBlocker = await detectInteractionBlocker(page);
+            const captureConsent = await dependencies.dismissConsentBanner(page);
+            const captureBlocker = await dependencies.detectInteractionBlocker(page);
             const evidenceSurfaceClear = (!captureConsent.found || captureConsent.dismissed) && !captureBlocker;
-            if (!evidenceSurfaceClear) {
-                errors.push(`Component screenshot capture was blocked by a visible surface${captureBlocker ? `: ${captureBlocker.selector}` : '.'}`);
-                await (0,promises_.mkdir)((0,external_node_path_.resolve)(options.outputDir, 'screenshots'), { recursive: true });
-                await page.screenshot({ path: screenshot, fullPage: true, animations: 'disabled', caret: 'hide' });
-                preliminaryAudit.screenshot = screenshot;
-            }
-            else {
-                await prepareEvidenceStates(page, screenshotFindings);
-                preliminaryAudit.elementScreenshots = await captureElementScreenshots(page, url, viewport.name, options.outputDir, screenshotCandidatesForFindings(screenshotFindings), preliminaryAudit.elementContexts);
-                if (needsFullPageScreenshotFallback(screenshotFindings, preliminaryAudit.elementScreenshots)) {
-                    await (0,promises_.mkdir)((0,external_node_path_.resolve)(options.outputDir, 'screenshots'), { recursive: true });
-                    await page.screenshot({ path: screenshot, fullPage: true, animations: 'disabled', caret: 'hide' });
+            try {
+                if (!evidenceSurfaceClear) {
+                    errors.push(`Component screenshot capture was blocked by a visible surface${captureBlocker ? `: ${captureBlocker.selector}` : '.'}`);
+                    await dependencies.capturePageScreenshot(page, screenshot);
                     preliminaryAudit.screenshot = screenshot;
+                    recordOutcome('screenshots', {
+                        status: 'blocked',
+                        observationCount: 1,
+                        blockedBy: captureBlocker?.selector || captureConsent.surfaceSelector || 'visible surface'
+                    });
+                }
+                else {
+                    await prepareEvidenceStates(page, screenshotFindings);
+                    preliminaryAudit.elementScreenshots = await dependencies.captureElementScreenshots(page, url, viewport.name, options.outputDir, screenshotCandidatesForFindings(screenshotFindings), preliminaryAudit.elementContexts);
+                    if (needsFullPageScreenshotFallback(screenshotFindings, preliminaryAudit.elementScreenshots)) {
+                        await dependencies.capturePageScreenshot(page, screenshot);
+                        preliminaryAudit.screenshot = screenshot;
+                    }
+                    recordOutcome('screenshots', {
+                        status: 'completed',
+                        observationCount: preliminaryAudit.elementScreenshots.length + (preliminaryAudit.screenshot ? 1 : 0)
+                    });
                 }
             }
+            catch (error) {
+                const message = errorMessage(error);
+                errors.push(`Screenshot check error: ${message}`);
+                recordOutcome('screenshots', { status: 'failed', observationCount: 0, error: message });
+            }
         }
+        else if (options.captureScreenshots) {
+            recordOutcome('screenshots', { status: 'not-applicable', observationCount: 0 });
+        }
+        preliminaryAudit.partial = isPartialAudit(errors, axeRun, interactionBlocker);
         return preliminaryAudit;
     }
     catch (error) {
         const cancelled = Boolean(signal?.aborted);
-        errors.push(cancelled ? CANCELLED_REASON : error instanceof Error ? error.message : String(error));
+        const message = cancelled ? CANCELLED_REASON : errorMessage(error);
+        errors.push(message);
+        recordOutcome('navigation', { status: 'failed', observationCount: 0, error: message }, true);
+        blockPending(checkIds.filter((checkId) => checkId !== 'navigation'), 'navigation');
         return {
             viewport,
             url,
@@ -155123,6 +157277,8 @@ async function auditViewport(browser, url, options, viewport, signal) {
             screenshot: '',
             elementScreenshots: [],
             errors,
+            collectionOutcomes,
+            partial: true,
             ...(cancelled ? { cancelled: true } : {})
         };
     }
@@ -155157,7 +157313,12 @@ async function auditPageBrowser(browser, url, options, execution, pageNumber, pa
             viewport: viewport.name
         });
     }
-    return { url, viewports };
+    return {
+        url,
+        viewports,
+        partial: viewports.length !== options.viewports.length
+            || viewports.some((viewport) => viewport.cancelled || viewport.partial)
+    };
 }
 async function runPool(items, concurrency, signal, worker) {
     const results = new Array(items.length);
@@ -155223,7 +157384,18 @@ async function runAudit(urls, source, skippedUrls, options, execution = {}) {
             await browser?.close().catch(() => undefined);
         }
     }
-    const findings = consolidateFindings(pages.flatMap(findingsFromPage));
+    // Contract pipeline: collect raw observations -> validate completeness -> classify ->
+    // consolidate without evidence loss -> build the criterion ledger -> validate the
+    // canonical JSON model -> render downstream formats.
+    assertCollectionCompleteness(pages);
+    const classifiedFindings = pages.flatMap(findingsFromPage);
+    const gatedFindings = applyConfirmedFindingConfidenceGate(classifiedFindings);
+    const consolidatedFindings = consolidateFindings(gatedFindings);
+    assertLosslessConsolidation(gatedFindings, consolidatedFindings);
+    const findings = assignFindingIds(consolidatedFindings).map((finding) => ({
+        ...finding,
+        standards: standardsForFinding(finding)
+    }));
     retainRepresentativeScreenshotPerFinding(findings);
     assertRemediationOnlyNotes(findings);
     const startedUrls = new Set(pages.map((page) => page.url));
@@ -155232,6 +157404,7 @@ async function runAudit(urls, source, skippedUrls, options, execution = {}) {
         : [];
     const cancelled = Boolean(execution.signal?.aborted);
     const generatedAt = new Date().toISOString();
+    const aaaAdvisory = Boolean(options.aaaAdvisory || options.wcagLevel === 'AAA');
     const summary = {
         status: cancelled ? 'cancelled' : 'completed',
         ...(cancelled ? { cancelledAt: generatedAt } : {}),
@@ -155239,6 +157412,11 @@ async function runAudit(urls, source, skippedUrls, options, execution = {}) {
         auditor: options.auditor,
         source,
         wcagLevel: options.wcagLevel,
+        conformanceTarget: 'AA',
+        aaaAdvisory,
+        humanAssessmentRequired: true,
+        conformanceDecision: 'not-determined',
+        qualityContract: { ...AUDIT_QUALITY_CONTRACT },
         landingPageUrl: options.landingPageUrl ?? urls[0] ?? '',
         requestedUrls: urls,
         auditedUrls: pages.filter((page) => page.viewports.some((viewport) => !viewport.cancelled && viewport.axeRun.completed && ((viewport.status !== null && viewport.status < 400) ||
@@ -155247,17 +157425,21 @@ async function runAudit(urls, source, skippedUrls, options, execution = {}) {
         pages,
         findings,
         coverage: buildCoverageMatrix(pages, findings),
+        criteria: buildWcagCriterionLedger(pages, findings, REQUIRED_MANUAL_CHECKS, aaaAdvisory),
         manualChecks: REQUIRED_MANUAL_CHECKS,
         limitations: [
             'This output is an evidence-backed test result, not a WCAG conformance certification.',
             'Automated checks cannot establish content meaning, complete contrast over imagery, correct reading order in every assistive technology, or all WCAG exceptions.',
             ...(cancelled ? [CANCELLED_REASON] : []),
-            'Screen-reader, physical-device, content-meaning, and judgment-based WCAG checks remain guided manual work.'
+            'Native screen-reader workflow evidence supplements this report when run, but screen-reader, physical-device, content-meaning, and judgment-based WCAG checks still require qualified human assessment.',
+            'A qualified reviewer must decide applicability and sign off every WCAG 2.2 A and AA criterion before this evidence can support a conformance claim.'
         ]
     };
+    assertCanonicalAuditSummary(summary);
+    assertAuditQualityContract(summary);
     await pruneUnreferencedScreenshots(summary, options.outputDir);
     const jsonPath = (0,external_node_path_.resolve)(options.outputDir, 'audit-results.json');
-    await (0,promises_.writeFile)(jsonPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+    await writeJsonReport(summary, jsonPath);
     await emitProgress(execution, {
         phase: cancelled ? 'cancelled' : 'reporting',
         message: cancelled
@@ -155269,7 +157451,388 @@ async function runAudit(urls, source, skippedUrls, options, execution = {}) {
 //# sourceMappingURL=runner.js.map
 // EXTERNAL MODULE: external "node:url"
 var external_node_url_ = __nccwpck_require__(73136);
+;// CONCATENATED MODULE: ./dist/reporting/cell-text.js
+function scalarText(value) {
+    if (value === null || value === undefined)
+        return '';
+    if (typeof value === 'string')
+        return value.trim();
+    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint')
+        return String(value).trim();
+    if (value instanceof Date)
+        return value.toISOString();
+    if (typeof value !== 'object')
+        return '';
+    const record = value;
+    if (typeof record.text === 'string')
+        return record.text.trim();
+    if ('result' in record)
+        return scalarText(record.result);
+    if (Array.isArray(record.richText)) {
+        return record.richText
+            .map((part) => scalarText(part))
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+    }
+    return '';
+}
+/** Returns useful displayed/scalar text without serialising ExcelJS value objects as "[object Object]". */
+function cellText(cell) {
+    const valueText = scalarText(cell.value);
+    if (valueText)
+        return valueText;
+    const renderedText = scalarText(cell.text);
+    return renderedText === '[object Object]' ? '' : renderedText;
+}
+//# sourceMappingURL=cell-text.js.map
+;// CONCATENATED MODULE: ./dist/reporting/validate.js
+
+
+
+
+
+
+const EXPECTED_TEMPLATE_REPORT_HEADERS = [
+    'Finding ID', 'Evidence type', 'Status', 'Severity', 'WCAG criterion', 'Level', 'WCAG title',
+    'Affected URL(s)', 'Viewport(s)', 'Component', 'Location', 'Summary', 'Issue', 'User impact',
+    'Technical locator', 'Test method', 'Actual result', 'Expected result', 'Recommendation', 'Owner',
+    'Effort', 'Screenshot', 'Rule ID', 'Labels', 'Translation review'
+];
+const EXPECTED_REPORT_HEADERS = EXPECTED_TEMPLATE_REPORT_HEADERS.map((header, index) => {
+    if (index === 1)
+        return 'Classification';
+    if (index === 3)
+        return 'Impact / review priority';
+    if (index === 16)
+        return 'Observed evidence';
+    return header;
+});
+const EXPECTED_TEMPLATE_WORKSHEETS = [
+    'Audit Summary',
+    'Findings',
+    'Page Inventory',
+    'Evidence',
+    'Manual Checks',
+    'WCAG 2.2 Reference'
+];
+const EXPECTED_WORKSHEETS = [
+    ...EXPECTED_TEMPLATE_WORKSHEETS,
+    'WCAG Criteria'
+];
+const expectedHeaders = new Map([
+    ['Findings', { row: 6, values: EXPECTED_REPORT_HEADERS }],
+    ['Page Inventory', { row: 4, values: ['URL', 'Audit state', 'Viewports planned', 'Viewports completed', 'Consent handling', 'Runtime errors', 'Notes'] }],
+    ['Evidence', { row: 4, values: ['Evidence path', 'Finding ID', 'Page URL', 'Viewport', 'Rule ID', 'Component', 'Technical locator', 'Evidence type', 'Detail'] }],
+    ['Manual Checks', { row: 4, values: ['Check ID', 'Manual check', 'WCAG criterion', 'Applies to', 'Procedure', 'Status', 'Reviewer notes'] }],
+    ['WCAG 2.2 Reference', { row: 3, values: ['Success criterion', 'Level', 'Title', 'Understanding link'] }],
+    ['WCAG Criteria', { row: 4, values: ['Criterion', 'Level', 'Scope', 'Status', 'Finding IDs', 'Automated evidence', 'Decision note', 'Understanding'] }]
+]);
+const expectedTabColors = new Map([
+    ['Audit Summary', 'FF17365D'],
+    ['Findings', 'FFC00000'],
+    ['Page Inventory', 'FF4472C4'],
+    ['Evidence', 'FF548235'],
+    ['Manual Checks', 'FFBF9000'],
+    ['WCAG 2.2 Reference', 'FF7F7F7F'],
+    ['WCAG Criteria', 'FF7030A0']
+]);
+const allowedClassifications = new Set(['confirmed', 'review', 'blocker', 'manual']);
+const allowedStatuses = new Set(['Open', 'In progress', 'Resolved', 'Risk accepted', 'Not applicable']);
+const allowedSeverities = new Set(['Critical', 'Serious', 'Moderate', 'Minor', 'Advisory']);
+const allowedCriterionStatuses = new Set(['passed', 'failed', 'manual-review-required', 'not-applicable', 'inconclusive']);
+const allowedEvidenceKinds = new Set(['axe', 'dom', 'keyboard', 'responsive', 'network', 'manual']);
+const criterionDefinitions = new Map(WCAG_CRITERIA_DEFINITIONS.map((criterion) => [criterion.criterion, criterion]));
+const standardCriteria = new Set(WCAG_CRITERIA_DEFINITIONS.filter(({ level }) => level !== 'AAA').map(({ criterion }) => criterion));
+const requiredManualChecks = new Map(REQUIRED_MANUAL_CHECKS.map((check) => [check.id, check]));
+function lines(value) {
+    return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+}
+function criterionId(value) {
+    return value.trim().split(/\s+/, 1)[0] ?? '';
+}
+function cellHyperlink(value) {
+    return typeof value === 'object' && value !== null && 'hyperlink' in value
+        ? String(value.hyperlink ?? '').trim()
+        : '';
+}
+function validateTemplateShape(workbook, errors) {
+    const names = workbook.worksheets.map((worksheet) => worksheet.name);
+    if (names.join('|') !== EXPECTED_WORKSHEETS.join('|')) {
+        errors.push(`Worksheet names and order must be exactly: ${EXPECTED_WORKSHEETS.join(', ')}.`);
+    }
+    for (const [name, expected] of expectedHeaders) {
+        const worksheet = workbook.getWorksheet(name);
+        if (!worksheet)
+            continue;
+        const actual = expected.values.map((_, index) => cellText(worksheet.getRow(expected.row).getCell(index + 1)));
+        if (actual.join('|') !== expected.values.join('|'))
+            errors.push(`${name} header row does not match the CarlasHub template.`);
+    }
+    for (const [name, color] of expectedTabColors) {
+        if (workbook.getWorksheet(name)?.properties.tabColor?.argb !== color) {
+            errors.push(`${name} worksheet tab colour does not match the CarlasHub template.`);
+        }
+    }
+}
+async function validateRelativeEvidenceLink(workbookPath, hyperlink, location, errors) {
+    let decoded = '';
+    try {
+        decoded = decodeURIComponent(hyperlink);
+    }
+    catch {
+        errors.push(`${location} contains an invalid evidence hyperlink.`);
+        return;
+    }
+    const segments = decoded.replaceAll('\\', '/').split('/');
+    if (!decoded || segments.includes('..') || (0,external_node_path_.isAbsolute)(decoded) || /^file:/i.test(decoded) || /^[a-z]:[\\/]/i.test(decoded)) {
+        errors.push(`${location} must use a relative evidence hyperlink.`);
+        return;
+    }
+    try {
+        await (0,promises_.access)((0,external_node_path_.resolve)((0,external_node_path_.dirname)(workbookPath), decoded));
+    }
+    catch {
+        errors.push(`${location} points to an evidence file that is not available beside the workbook.`);
+    }
+}
+function validateHttpCell(cell, label, errors) {
+    const url = cellText(cell);
+    if (!/^https?:\/\/\S+$/i.test(url))
+        errors.push(`${label} must contain one HTTP(S) URL.`);
+    if (cellHyperlink(cell.value) !== url)
+        errors.push(`${label} must link to the same URL displayed in the cell.`);
+}
+async function validateExcelReport(path) {
+    const workbook = new excel.Workbook();
+    await workbook.xlsx.readFile(path);
+    const errors = [];
+    const warnings = [];
+    validateTemplateShape(workbook, errors);
+    for (const name of EXPECTED_WORKSHEETS) {
+        if (!workbook.getWorksheet(name))
+            errors.push(`Missing ${name} worksheet.`);
+    }
+    const findings = workbook.getWorksheet('Findings');
+    let findingRows = 0;
+    const findingRecords = new Map();
+    if (findings) {
+        for (let rowNumber = 7; rowNumber <= findings.rowCount; rowNumber += 1) {
+            const row = findings.getRow(rowNumber);
+            if (!cellText(row.getCell(1)))
+                continue;
+            findingRows += 1;
+            const id = cellText(row.getCell(1));
+            const classification = cellText(row.getCell(2));
+            const mappedCriteria = new Set(lines(cellText(row.getCell(5))).filter((value) => !['Advisory', 'Best Practice', 'None'].includes(value)));
+            if (!/^A11Y\d{3,}$/.test(id))
+                errors.push(`Findings!A${rowNumber} must contain a generated finding ID.`);
+            if (findingRecords.has(id))
+                errors.push(`Findings!A${rowNumber} duplicates finding ID ${id}.`);
+            findingRecords.set(id, { classification, criteria: mappedCriteria, rowNumber });
+            if (!allowedClassifications.has(classification))
+                errors.push(`Findings!B${rowNumber} contains an unsupported evidence type.`);
+            if (!allowedStatuses.has(cellText(row.getCell(3))))
+                errors.push(`Findings!C${rowNumber} contains an unsupported status.`);
+            if (!allowedSeverities.has(cellText(row.getCell(4))))
+                errors.push(`Findings!D${rowNumber} contains an unsupported severity.`);
+            for (const criterion of mappedCriteria) {
+                if (!criterionDefinitions.has(criterion))
+                    errors.push(`Findings!E${rowNumber} maps to unknown or obsolete criterion ${criterion}.`);
+            }
+            for (let column = 1; column <= EXPECTED_REPORT_HEADERS.length; column += 1) {
+                if (!cellText(row.getCell(column)))
+                    errors.push(`Required finding cell ${row.getCell(column).address} is empty.`);
+            }
+            const screenshot = cellText(row.getCell(22));
+            const screenshotLink = cellHyperlink(row.getCell(22).value);
+            if (screenshot !== 'Not captured') {
+                if (!screenshotLink)
+                    errors.push(`Findings!V${rowNumber} must contain a relative evidence hyperlink or “Not captured”.`);
+                else
+                    await validateRelativeEvidenceLink(path, screenshotLink, `Findings!V${rowNumber}`, errors);
+            }
+        }
+    }
+    if (findingRows === 0)
+        warnings.push('The workbook contains no finding rows.');
+    const pages = workbook.getWorksheet('Page Inventory');
+    if (pages) {
+        const seen = new Set();
+        for (let rowNumber = 5; rowNumber <= pages.rowCount; rowNumber += 1) {
+            const cell = pages.getRow(rowNumber).getCell(1);
+            if (!cellText(cell))
+                continue;
+            validateHttpCell(cell, `Page Inventory!A${rowNumber}`, errors);
+            if (seen.has(cellText(cell)))
+                errors.push(`Page Inventory!A${rowNumber} duplicates an earlier URL.`);
+            seen.add(cellText(cell));
+        }
+    }
+    const evidence = workbook.getWorksheet('Evidence');
+    let evidenceRows = 0;
+    let imageInventoryRows = 0;
+    const evidenceFindingIds = new Set();
+    if (evidence) {
+        for (let rowNumber = 5; rowNumber <= evidence.rowCount; rowNumber += 1) {
+            const row = evidence.getRow(rowNumber);
+            if (!Array.from({ length: 9 }, (_, index) => cellText(row.getCell(index + 1))).some(Boolean))
+                continue;
+            evidenceRows += 1;
+            for (let column = 1; column <= 9; column += 1) {
+                if (!cellText(row.getCell(column)))
+                    errors.push(`Required evidence cell ${row.getCell(column).address} is empty.`);
+            }
+            const evidenceFindingId = cellText(row.getCell(2));
+            evidenceFindingIds.add(evidenceFindingId);
+            if (!findingRecords.has(evidenceFindingId))
+                errors.push(`Evidence!B${rowNumber} refers to unknown finding ID ${evidenceFindingId}.`);
+            if (!allowedEvidenceKinds.has(cellText(row.getCell(8))))
+                errors.push(`Evidence!H${rowNumber} contains an unsupported evidence type.`);
+            validateHttpCell(row.getCell(3), `Evidence!C${rowNumber}`, errors);
+            const reference = cellText(row.getCell(1));
+            const hyperlink = cellHyperlink(row.getCell(1).value);
+            if (reference !== 'Not captured') {
+                imageInventoryRows += 1;
+                if (!hyperlink)
+                    errors.push(`Evidence!A${rowNumber} must contain a relative evidence hyperlink or “Not captured”.`);
+                else
+                    await validateRelativeEvidenceLink(path, hyperlink, `Evidence!A${rowNumber}`, errors);
+            }
+        }
+    }
+    for (const [id, finding] of findingRecords) {
+        if (!evidenceFindingIds.has(id))
+            errors.push(`Finding ${id} at Findings!A${finding.rowNumber} has no evidence row.`);
+    }
+    const manualChecks = workbook.getWorksheet('Manual Checks');
+    if (manualChecks) {
+        const seenChecks = new Set();
+        const seenCriteria = new Set();
+        for (let rowNumber = 5; rowNumber <= manualChecks.rowCount; rowNumber += 1) {
+            const row = manualChecks.getRow(rowNumber);
+            if (!cellText(row.getCell(1)))
+                continue;
+            const id = cellText(row.getCell(1));
+            const criterion = cellText(row.getCell(3));
+            const expected = requiredManualChecks.get(id);
+            if (seenChecks.has(id))
+                errors.push(`Manual Checks!A${rowNumber} duplicates check ID ${id}.`);
+            seenChecks.add(id);
+            if (!expected)
+                errors.push(`Manual Checks!A${rowNumber} contains unknown check ID ${id}.`);
+            if (!standardCriteria.has(criterion))
+                errors.push(`Manual Checks!C${rowNumber} must map to one active WCAG 2.2 A/AA criterion.`);
+            if (seenCriteria.has(criterion))
+                errors.push(`Manual Checks!C${rowNumber} duplicates criterion ${criterion}.`);
+            seenCriteria.add(criterion);
+            if (expected && expected.wcag[0] !== criterion)
+                errors.push(`Manual Checks!C${rowNumber} does not match ${id}.`);
+            for (const column of [2, 4, 5, 7]) {
+                if (!cellText(row.getCell(column)))
+                    errors.push(`Required manual-check cell ${row.getCell(column).address} is empty.`);
+            }
+            if (cellText(row.getCell(6)) !== 'Not tested')
+                errors.push(`Manual Checks!F${rowNumber} must initially be “Not tested”.`);
+        }
+        const missingChecks = [...requiredManualChecks.keys()].filter((id) => !seenChecks.has(id));
+        const missingCriteria = [...standardCriteria].filter((criterion) => !seenCriteria.has(criterion));
+        if (missingChecks.length)
+            errors.push(`Manual Checks is missing ${missingChecks.length} required check(s): ${missingChecks.join(', ')}.`);
+        if (missingCriteria.length)
+            errors.push(`Manual Checks is missing ${missingCriteria.length} WCAG 2.2 A/AA criterion mapping(s): ${missingCriteria.join(', ')}.`);
+        if (seenChecks.size !== REQUIRED_MANUAL_CHECKS.length)
+            errors.push(`Manual Checks must contain exactly ${REQUIRED_MANUAL_CHECKS.length} unique required checks.`);
+    }
+    const embeddedImages = workbook.worksheets.reduce((total, worksheet) => total + worksheet.getImages().length, 0);
+    if (embeddedImages)
+        errors.push(`Workbook contains ${embeddedImages} embedded image(s); evidence must remain linked to keep it portable and lightweight.`);
+    const summary = workbook.getWorksheet('Audit Summary');
+    const aaaAdvisoryEnabled = summary
+        ? cellText(summary.getCell('B7')).includes('separate Level AAA advisory checks enabled')
+        : false;
+    const criteria = workbook.getWorksheet('WCAG Criteria');
+    if (criteria) {
+        const seenCriteria = new Set();
+        for (let rowNumber = 5; rowNumber <= criteria.rowCount; rowNumber += 1) {
+            const row = criteria.getRow(rowNumber);
+            if (!cellText(row.getCell(1)))
+                continue;
+            const id = criterionId(cellText(row.getCell(1)));
+            const definition = criterionDefinitions.get(id);
+            if (seenCriteria.has(id))
+                errors.push(`WCAG Criteria!A${rowNumber} duplicates criterion ${id}.`);
+            seenCriteria.add(id);
+            for (let column = 1; column <= 8; column += 1) {
+                if (!cellText(row.getCell(column)))
+                    errors.push(`Required criterion cell ${row.getCell(column).address} is empty.`);
+            }
+            if (!definition)
+                errors.push(`WCAG Criteria!A${rowNumber} contains unknown or obsolete criterion ${id}.`);
+            const level = cellText(row.getCell(2));
+            const scope = cellText(row.getCell(3));
+            const status = cellText(row.getCell(4));
+            if (definition && level !== definition.level)
+                errors.push(`WCAG Criteria!B${rowNumber} does not match criterion ${id}.`);
+            if (definition && scope !== (definition.level === 'AAA' ? 'AAA advisory' : 'AA conformance target')) {
+                errors.push(`WCAG Criteria!C${rowNumber} does not match criterion ${id}.`);
+            }
+            if (!allowedCriterionStatuses.has(status))
+                errors.push(`WCAG Criteria!D${rowNumber} contains an unsupported status.`);
+            if (status === 'passed')
+                errors.push(`WCAG Criteria!D${rowNumber} cannot be marked passed by an automated report.`);
+            const referencedIds = lines(cellText(row.getCell(5))).filter((value) => value !== 'None');
+            const related = [...findingRecords.entries()].filter(([, finding]) => finding.criteria.has(id));
+            const confirmedIds = related.filter(([, finding]) => finding.classification === 'confirmed').map(([findingId]) => findingId);
+            const unresolvedIds = related.filter(([, finding]) => ['review', 'blocker'].includes(finding.classification)).map(([findingId]) => findingId);
+            for (const findingId of referencedIds) {
+                const finding = findingRecords.get(findingId);
+                if (!finding)
+                    errors.push(`WCAG Criteria!E${rowNumber} refers to unknown finding ID ${findingId}.`);
+                else if (!finding.criteria.has(id))
+                    errors.push(`WCAG Criteria!E${rowNumber} refers to ${findingId}, which is not mapped to criterion ${id}.`);
+            }
+            const criterionIsEvaluated = definition?.level !== 'AAA' || aaaAdvisoryEnabled;
+            if (criterionIsEvaluated) {
+                if (confirmedIds.length && status !== 'failed')
+                    errors.push(`WCAG Criteria!D${rowNumber} must be failed because confirmed finding(s) map to ${id}.`);
+                if (!confirmedIds.length && status === 'failed')
+                    errors.push(`WCAG Criteria!D${rowNumber} cannot be failed without a confirmed finding mapped to ${id}.`);
+                if (!confirmedIds.length && unresolvedIds.length && status !== 'inconclusive')
+                    errors.push(`WCAG Criteria!D${rowNumber} must be inconclusive while review or blocker findings map to ${id}.`);
+                const allowedUnevaluatedStatuses = definition?.level === 'AAA' ? ['inconclusive'] : ['manual-review-required', 'inconclusive'];
+                if (!confirmedIds.length && !unresolvedIds.length && !allowedUnevaluatedStatuses.includes(status)) {
+                    errors.push(`WCAG Criteria!D${rowNumber} requires a human decision for ${id}.`);
+                }
+            }
+            if (definition?.level === 'AAA' && !aaaAdvisoryEnabled && status !== 'not-applicable')
+                errors.push(`WCAG Criteria!D${rowNumber} must keep optional AAA criterion ${id} outside the AA conformance decision.`);
+            if (criterionIsEvaluated) {
+                for (const confirmedId of confirmedIds) {
+                    if (!referencedIds.includes(confirmedId))
+                        errors.push(`WCAG Criteria!E${rowNumber} is missing confirmed finding ${confirmedId}.`);
+                }
+            }
+            validateHttpCell(row.getCell(8), `WCAG Criteria!H${rowNumber}`, errors);
+        }
+        const missing = [...criterionDefinitions.keys()].filter((criterion) => !seenCriteria.has(criterion));
+        if (missing.length)
+            errors.push(`WCAG Criteria is missing ${missing.length} active criterion row(s): ${missing.join(', ')}.`);
+        if (seenCriteria.size !== WCAG_CRITERIA_DEFINITIONS.length)
+            errors.push(`WCAG Criteria must contain exactly ${WCAG_CRITERIA_DEFINITIONS.length} unique active WCAG 2.2 criteria.`);
+    }
+    const auditor = summary ? cellText(summary.getCell('B6')) : '';
+    if (!auditor)
+        errors.push('Auditor is empty in Audit Summary!B6.');
+    if (summary)
+        validateHttpCell(summary.getCell('B8'), 'Audit Summary!B8', errors);
+    return { valid: errors.length === 0, findingRows, evidenceRows, imageInventoryRows, errors, warnings, auditor };
+}
+//# sourceMappingURL=validate.js.map
 ;// CONCATENATED MODULE: ./dist/reporting/excel.js
+
+
+
 
 
 
@@ -155279,6 +157842,36 @@ const moduleDirectory = (0,external_node_path_.dirname)((0,external_node_url_.fi
 const templateFileName = ['accessibility', 'report', 'template.xlsx'].join('-');
 const DEFAULT_TEMPLATE = (0,external_node_path_.resolve)(moduleDirectory, '..', '..', 'assets', templateFileName);
 const CANONICAL_TEMPLATE_SHA256 = '0dc49529d49402eaad4c5511f6db1cc44f91afb1cbd804da6bc702081321a4ce';
+const REPORT_COLOURS = {
+    primary: 'FF1A73E8',
+    primaryDark: 'FF174EA6',
+    text: 'FF202124',
+    border: 'FFDADCE0',
+    surface: 'FFF8F9FA',
+    open: 'FFE8F0FE',
+    critical: 'FFB3261E',
+    serious: 'FFC5221F',
+    moderate: 'FFF9AB00',
+    minor: 'FFFDE293',
+    advisory: 'FFDDE8F8',
+    review: 'FFFFF4CE',
+    blocker: 'FFEADDFF',
+    confirmed: 'FFFCE8E6',
+    manual: 'FFE6F4EA'
+};
+const SEVERITY_COLOURS = {
+    Critical: { background: REPORT_COLOURS.critical, foreground: 'FFFFFFFF' },
+    Serious: { background: REPORT_COLOURS.serious, foreground: 'FFFFFFFF' },
+    Moderate: { background: REPORT_COLOURS.moderate, foreground: REPORT_COLOURS.text },
+    Minor: { background: REPORT_COLOURS.minor, foreground: REPORT_COLOURS.text },
+    Advisory: { background: REPORT_COLOURS.advisory, foreground: REPORT_COLOURS.text }
+};
+const CLASSIFICATION_COLOURS = {
+    confirmed: { background: REPORT_COLOURS.confirmed, foreground: REPORT_COLOURS.serious },
+    review: { background: REPORT_COLOURS.review, foreground: 'FF7A4F01' },
+    blocker: { background: REPORT_COLOURS.blocker, foreground: 'FF5B21B6' },
+    manual: { background: REPORT_COLOURS.manual, foreground: 'FF137333' }
+};
 async function assertCanonicalTemplate(path) {
     const digest = (0,external_node_crypto_namespaceObject.createHash)('sha256').update(await (0,promises_.readFile)(path)).digest('hex');
     if (digest !== CANONICAL_TEMPLATE_SHA256) {
@@ -155287,6 +157880,86 @@ async function assertCanonicalTemplate(path) {
 }
 function excel_clone(value) {
     return structuredClone(value);
+}
+function solidFill(cell, colour) {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colour } };
+}
+function styleBadge(cell, background, foreground) {
+    solidFill(cell, background);
+    cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: foreground } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+        top: { style: 'thin', color: { argb: REPORT_COLOURS.border } },
+        bottom: { style: 'thin', color: { argb: REPORT_COLOURS.border } },
+        left: { style: 'thin', color: { argb: REPORT_COLOURS.border } },
+        right: { style: 'thin', color: { argb: REPORT_COLOURS.border } }
+    };
+}
+function evidenceKey(value) {
+    return value
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/[-_]+/g, ' ')
+        .replace(/^\w/, (character) => character.toUpperCase());
+}
+function compactEvidenceText(value) {
+    const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+    return text.length > 260 ? `${text.slice(0, 257)}…` : text;
+}
+function readableEvidenceDetail(detail) {
+    const source = detail.trim();
+    if (!source)
+        return 'No additional detail recorded.';
+    let parsed;
+    try {
+        parsed = JSON.parse(source);
+    }
+    catch {
+        return compactEvidenceText(source);
+    }
+    if (typeof parsed !== 'object' || parsed === null)
+        return compactEvidenceText(parsed);
+    const lines = [];
+    let truncated = false;
+    const append = (label, value) => {
+        if (lines.length >= 24) {
+            truncated = true;
+            return;
+        }
+        const text = compactEvidenceText(value);
+        if (text)
+            lines.push(`${evidenceKey(label)}: ${text}`);
+    };
+    const visit = (value, path, depth) => {
+        if (lines.length >= 24) {
+            truncated = true;
+            return;
+        }
+        if (value === null || value === undefined || typeof value !== 'object') {
+            append(path || 'Value', value);
+            return;
+        }
+        if (Array.isArray(value)) {
+            if (value.every((item) => item === null || typeof item !== 'object')) {
+                append(path || 'Values', value.join(', '));
+                return;
+            }
+            value.slice(0, 8).forEach((item, index) => visit(item, `${path || 'Item'} ${index + 1}`, depth + 1));
+            if (value.length > 8)
+                truncated = true;
+            return;
+        }
+        if (depth >= 3) {
+            append(path || 'Detail', JSON.stringify(value));
+            return;
+        }
+        for (const [key, nested] of Object.entries(value)) {
+            visit(nested, path ? `${path} · ${key}` : key, depth + 1);
+        }
+    };
+    visit(parsed, '', 0);
+    if (truncated)
+        lines.push('Additional technical detail is available in audit-results.json.');
+    return lines.join('\n') || 'No additional detail recorded.';
 }
 function valueText(value) {
     if (value === null || value === undefined)
@@ -155403,14 +158076,14 @@ function reportRowValues(finding, id, criteria, outputPath) {
         finding.impact,
         finding.selectors.join('\n') || 'Page-level or structural check',
         finding.testing,
-        finding.issue,
+        finding.evidence.map((item) => `[${item.kind}] ${readableEvidenceDetail(item.detail)}`).join('\n\n') || finding.issue,
         expectedOutcome(finding, criteria),
         finding.remediation,
         finding.assignment,
         finding.effort,
         screenshotLink(finding, outputPath),
         finding.ruleId,
-        [finding.classification, finding.ruleId, ...finding.wcag.map((criterion) => `WCAG ${criterion}`)].join(', '),
+        [finding.classification, finding.ruleId, ...(finding.standards ?? finding.wcag.map((criterion) => `WCAG ${criterion}`))].join(', '),
         finding.translationRequired
     ];
 }
@@ -155437,15 +158110,12 @@ function writeStyledRow(worksheet, rowNumber, values, template) {
             row.getCell(column).dataValidation = excel_clone(validation);
     }
 }
-function findingId(index) {
-    return `A11Y${String(index + 1).padStart(3, '0')}`;
-}
 function pageStatus(page, skipped) {
     if (skipped || !page)
         return 'Not started';
     if (page.viewports.some((viewport) => viewport.cancelled))
         return 'Cancelled';
-    if (page.viewports.some((viewport) => viewport.interactionBlocker || !viewport.axeRun.completed))
+    if (page.partial || page.viewports.some((viewport) => viewport.partial || viewport.interactionBlocker || !viewport.axeRun.completed))
         return 'Partial';
     return 'Completed';
 }
@@ -155488,14 +158158,14 @@ function populateEvidence(worksheet, summary, outputPath) {
             const path = evidence.screenshot ? workbookRelativePath(outputPath, evidence.screenshot) : '';
             writeStyledRow(worksheet, rowNumber, [
                 path ? { text: path, hyperlink: path, tooltip: 'Open the evidence file stored beside this workbook.' } : 'Not captured',
-                findingId(findingIndex),
+                findingId(finding, findingIndex),
                 { text: evidence.pageUrl, hyperlink: evidence.pageUrl },
                 evidence.viewport ? viewportLabel(evidence.viewport) : 'Not specified',
                 finding.ruleId,
                 componentName(finding),
                 evidence.selector || finding.selectors.join('\n') || 'Page-level or structural check',
                 evidence.kind,
-                evidence.detail
+                readableEvidenceDetail(evidence.detail)
             ], template);
             rowNumber += 1;
         }
@@ -155512,39 +158182,123 @@ function populateManualChecks(worksheet, summary) {
             check.applicableTo,
             check.procedure,
             'Not tested',
-            ''
+            check.expectedEvidence ? `Record: ${check.expectedEvidence}` : 'Record the tested scope, method, result, evidence, and reviewer verdict.'
         ], template);
     });
     worksheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: Math.max(5, summary.manualChecks.length + 4), column: 7 } };
 }
+function populateCriteria(workbook, summary) {
+    const worksheet = workbook.addWorksheet('WCAG Criteria', {
+        properties: { tabColor: { argb: 'FF7030A0' } }
+    });
+    worksheet.mergeCells('A1:H1');
+    worksheet.getCell('A1').value = 'WCAG 2.2 criterion-by-criterion ledger';
+    worksheet.getCell('A1').font = { name: 'Arial', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: REPORT_COLOURS.primaryDark } };
+    worksheet.getCell('A1').alignment = { vertical: 'middle' };
+    worksheet.getRow(1).height = 32;
+    worksheet.mergeCells('A2:H2');
+    worksheet.getCell('A2').value = 'The conformance target is WCAG 2.2 Level AA. Level AAA entries are optional advisory checks. Automated evidence does not replace qualified human assessment or establish conformance.';
+    worksheet.getCell('A2').font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF595959' } };
+    worksheet.getCell('A2').alignment = { wrapText: true, vertical: 'middle' };
+    worksheet.getRow(2).height = 32;
+    const headers = ['Criterion', 'Level', 'Scope', 'Status', 'Finding IDs', 'Automated evidence', 'Decision note', 'Understanding'];
+    worksheet.getRow(4).values = headers;
+    worksheet.getRow(4).height = 26;
+    worksheet.getRow(4).eachCell((cell) => {
+        cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: REPORT_COLOURS.primary } };
+        cell.alignment = { vertical: 'middle', wrapText: true };
+        cell.border = { bottom: { style: 'thin', color: { argb: 'FFB4C6E7' } } };
+    });
+    const statusColours = {
+        passed: 'FFE2F0D9',
+        failed: 'FFF4CCCC',
+        'manual-review-required': 'FFFFF2CC',
+        inconclusive: 'FFFCE5CD',
+        'not-applicable': 'FFE7E6E6'
+    };
+    (summary.criteria ?? []).forEach((criterion, index) => {
+        const row = worksheet.getRow(index + 5);
+        row.values = [
+            `${criterion.criterion} ${criterion.title}`,
+            criterion.level,
+            criterion.scope === 'standard' ? 'AA conformance target' : 'AAA advisory',
+            criterion.status,
+            criterion.findingIds.join('\n') || 'None',
+            criterion.automatedEvidence.join('\n') || 'No automated evidence mapped',
+            criterion.detail,
+            { text: criterion.understandingUrl, hyperlink: criterion.understandingUrl, tooltip: `Open WCAG Understanding ${criterion.criterion}` }
+        ];
+        row.height = 48;
+        row.eachCell((cell, column) => {
+            cell.font = { name: 'Arial', size: 10, color: { argb: 'FF202124' } };
+            cell.alignment = { vertical: 'top', wrapText: true };
+            cell.border = {
+                bottom: { style: 'hair', color: { argb: 'FFD9E2F3' } },
+                right: { style: 'hair', color: { argb: 'FFE7E6E6' } }
+            };
+            if (column === 4)
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: statusColours[criterion.status] ?? 'FFFFFFFF' } };
+        });
+        row.getCell(1).font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF202124' } };
+        row.getCell(4).dataValidation = {
+            type: 'list',
+            allowBlank: false,
+            formulae: ['"passed,failed,manual-review-required,not-applicable,inconclusive"'],
+            showErrorMessage: true,
+            errorTitle: 'Choose a WCAG status',
+            error: 'Select one of the five supported criterion statuses.',
+            showInputMessage: true,
+            promptTitle: 'Human assessment decision',
+            prompt: 'Change this status only after recording qualified human evidence in the decision note.'
+        };
+        row.getCell(8).font = { name: 'Arial', size: 10, color: { argb: 'FF0563C1' }, underline: true };
+    });
+    worksheet.columns = [
+        { width: 34 }, { width: 9 }, { width: 22 }, { width: 24 },
+        { width: 18 }, { width: 42 }, { width: 48 }, { width: 46 }
+    ];
+    worksheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 4, topLeftCell: 'C5', showGridLines: false, zoomScale: 90 }];
+    worksheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: Math.max(5, (summary.criteria?.length ?? 0) + 4), column: 8 } };
+    worksheet.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+}
 function populateSummary(worksheet, summary) {
     const allViewports = summary.pages.flatMap((page) => page.viewports);
     const classifications = (classification) => summary.findings.filter((finding) => finding.classification === classification).length;
-    const severities = (severity) => summary.findings.filter((finding) => finding.severity === severity).length;
+    const confirmedSeverities = (severity) => summary.findings.filter((finding) => finding.classification === 'confirmed' && finding.severity === severity).length;
     worksheet.getCell('B4').value = summary.status === 'completed' ? 'Completed' : 'Cancelled';
     worksheet.getCell('B5').value = new Date(summary.generatedAt);
     worksheet.getCell('B6').value = summary.auditor;
-    worksheet.getCell('B7').value = summary.wcagLevel === 'AAA'
-        ? 'WCAG 2.2 Level A, AA, and AAA'
-        : 'WCAG 2.2 Level A and AA';
+    const aaaAdvisory = summary.aaaAdvisory ?? summary.wcagLevel === 'AAA';
+    worksheet.getCell('B7').value = `WCAG 2.2 Level A and AA${aaaAdvisory ? '; separate Level AAA advisory checks enabled' : ''}`;
     const landingUrl = summary.landingPageUrl || summary.requestedUrls[0] || '';
     worksheet.getCell('B8').value = /^https?:\/\//i.test(landingUrl) ? { text: landingUrl, hyperlink: landingUrl } : landingUrl;
     worksheet.getCell('B9').value = summary.requestedUrls.length;
     worksheet.getCell('B10').value = summary.pages.length;
     worksheet.getCell('B11').value = allViewports.length;
+    worksheet.getCell('D4').value = 'Report items';
+    worksheet.getCell('D6').value = 'Review candidates';
+    worksheet.getCell('D8').value = 'Manual plan checks';
+    worksheet.getCell('G3').value = 'Confirmed impact';
     worksheet.getCell('E4').value = summary.findings.length;
     worksheet.getCell('E5').value = classifications('confirmed');
     worksheet.getCell('E6').value = classifications('review');
     worksheet.getCell('E7').value = classifications('blocker');
     worksheet.getCell('E8').value = summary.manualChecks.length;
     ['Critical', 'Serious', 'Moderate', 'Minor', 'Advisory'].forEach((severity, index) => {
-        worksheet.getCell(`H${index + 4}`).value = severities(severity);
+        worksheet.getCell(`H${index + 4}`).value = confirmedSeverities(severity);
     });
     worksheet.getCell('A14').value = [
         `Requested URLs: ${summary.requestedUrls.length}`,
         `Audited URLs: ${summary.auditedUrls.length}`,
+        `Partial pages: ${summary.pages.filter((page) => page.partial).length}`,
         `Skipped URLs: ${summary.skippedUrls.length}`,
         `Viewports run: ${allViewports.length}`,
+        `Conformance target: WCAG 2.2 Level AA`,
+        `Audit Quality Contract: ${summary.qualityContract?.version ?? 'not recorded'}`,
+        `Finding policy: ${summary.qualityContract?.findingPolicy ?? 'not recorded'}`,
+        `AAA advisory checks: ${aaaAdvisory ? 'Enabled' : 'Disabled'}`,
         `Source: ${summary.source}`
     ].join('\n');
     const unresolvedCoverage = summary.coverage.flatMap((page) => page.viewports)
@@ -155552,13 +158306,140 @@ function populateSummary(worksheet, summary) {
         .filter((item) => !['confirmed-passed', 'confirmed-failed', 'not-applicable'].includes(item.status)).length;
     worksheet.getCell('A19').value = [
         ...summary.limitations,
+        'Conformance decision: Not determined. Qualified human assessment and sign-off are mandatory.',
         `Coverage matrix contains ${unresolvedCoverage} inconclusive, manual-review-required, or not-tested result(s); these are not passes.`,
+        `Criterion ledger contains ${(summary.criteria ?? []).filter((criterion) => ['manual-review-required', 'inconclusive'].includes(criterion.status)).length} unresolved criterion outcome(s).`,
         summary.manualChecks.length
             ? `${summary.manualChecks.length} guided manual check(s) remain in the Manual Checks sheet.`
             : 'No additional guided manual checks were generated.'
     ].join('\n');
 }
+function applySummaryPresentation(worksheet) {
+    worksheet.views = [{ state: 'frozen', ySplit: 3, showGridLines: false, zoomScale: 100 }];
+    worksheet.getCell('B5').numFmt = 'dd mmm yyyy, hh:mm';
+    for (const cellAddress of ['B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11']) {
+        const cell = worksheet.getCell(cellAddress);
+        cell.font = { ...cell.font, name: 'Arial', color: { argb: REPORT_COLOURS.text } };
+    }
+    const runStatus = valueText(worksheet.getCell('B4').value);
+    if (runStatus === 'Completed')
+        styleBadge(worksheet.getCell('B4'), REPORT_COLOURS.manual, 'FF137333');
+    else if (runStatus === 'Cancelled')
+        styleBadge(worksheet.getCell('B4'), REPORT_COLOURS.review, 'FF7A4F01');
+    else
+        styleBadge(worksheet.getCell('B4'), REPORT_COLOURS.confirmed, REPORT_COLOURS.serious);
+    const resultCards = [
+        ['E4', REPORT_COLOURS.open, REPORT_COLOURS.primaryDark],
+        ['E5', REPORT_COLOURS.confirmed, REPORT_COLOURS.serious],
+        ['E6', REPORT_COLOURS.review, 'FF7A4F01'],
+        ['E7', REPORT_COLOURS.blocker, 'FF5B21B6'],
+        ['E8', REPORT_COLOURS.manual, 'FF137333']
+    ];
+    resultCards.forEach(([address, background, foreground]) => styleBadge(worksheet.getCell(address), background, foreground));
+    ['Critical', 'Serious', 'Moderate', 'Minor', 'Advisory'].forEach((severity, index) => {
+        const colours = SEVERITY_COLOURS[severity];
+        styleBadge(worksheet.getCell(`G${index + 4}`), colours.background, colours.foreground);
+        styleBadge(worksheet.getCell(`H${index + 4}`), colours.background, colours.foreground);
+    });
+    worksheet.getCell('A14').alignment = { vertical: 'top', wrapText: true };
+    worksheet.getCell('A19').alignment = { vertical: 'top', wrapText: true };
+    worksheet.getRow(19).height = 156;
+}
+function applyFindingPresentation(worksheet, findings) {
+    worksheet.getRow(6).values = EXPECTED_REPORT_HEADERS;
+    worksheet.getRow(6).eachCell((cell) => {
+        solidFill(cell, REPORT_COLOURS.primary);
+        cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.alignment = { vertical: 'middle', wrapText: true };
+    });
+    worksheet.views = [{
+            state: 'frozen',
+            xSplit: 2,
+            ySplit: 6,
+            topLeftCell: 'C7',
+            showGridLines: false,
+            zoomScale: 75
+        }];
+    worksheet.getCell('A4').value = 'Prioritise confirmed barriers and blockers. Review rows are evidence-led candidates requiring human validation; their rating is review priority, not confirmed impact severity.';
+    const widths = [12, 14, 12, 16, 14, 8, 22, 34, 18, 22, 22, 32, 36, 34, 30, 34, 36, 34, 36, 14, 12, 18, 18, 18, 16];
+    const hiddenColumns = new Set([6, 7, 9, 11, 15, 16, 24, 25]);
+    widths.forEach((width, index) => {
+        const column = worksheet.getColumn(index + 1);
+        column.width = width;
+        column.hidden = hiddenColumns.has(index + 1);
+    });
+    worksheet.pageSetup = {
+        ...worksheet.pageSetup,
+        orientation: 'landscape',
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        horizontalCentered: false,
+        printTitlesRow: '1:6'
+    };
+    findings.forEach((finding, index) => {
+        const row = worksheet.getRow(index + 7);
+        row.height = 72;
+        row.eachCell((cell) => {
+            cell.font = { ...cell.font, name: 'Arial', size: 10, color: { argb: REPORT_COLOURS.text } };
+            cell.alignment = { ...cell.alignment, vertical: 'top', wrapText: true };
+            cell.border = { ...cell.border, bottom: { style: 'thin', color: { argb: REPORT_COLOURS.border } } };
+            if (index % 2 === 1)
+                solidFill(cell, REPORT_COLOURS.surface);
+        });
+        row.getCell(1).font = { name: 'Arial', size: 10, bold: true, color: { argb: REPORT_COLOURS.primaryDark } };
+        const classification = CLASSIFICATION_COLOURS[finding.classification];
+        styleBadge(row.getCell(2), classification.background, classification.foreground);
+        styleBadge(row.getCell(3), REPORT_COLOURS.open, REPORT_COLOURS.primaryDark);
+        const priority = finding.classification === 'confirmed'
+            ? SEVERITY_COLOURS[finding.severity]
+            : CLASSIFICATION_COLOURS[finding.classification];
+        styleBadge(row.getCell(4), priority.background, priority.foreground);
+    });
+}
+function applySupportingSheetPresentation(worksheet, headerRow, dataStartRow, columnCount, xSplit = 1) {
+    worksheet.views = [{
+            state: 'frozen',
+            xSplit,
+            ySplit: headerRow,
+            topLeftCell: `${String.fromCharCode(65 + xSplit)}${dataStartRow}`,
+            showGridLines: false,
+            zoomScale: 90
+        }];
+    worksheet.getRow(headerRow).eachCell((cell) => {
+        solidFill(cell, REPORT_COLOURS.primary);
+        cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+    });
+    for (let rowNumber = dataStartRow; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+        const row = worksheet.getRow(rowNumber);
+        row.height = worksheet.name === 'Evidence' ? 66 : Math.max(row.height ?? 0, 42);
+        for (let column = 1; column <= columnCount; column += 1) {
+            const cell = row.getCell(column);
+            cell.font = { ...cell.font, name: 'Arial', size: 10, color: { argb: REPORT_COLOURS.text } };
+            cell.alignment = { ...cell.alignment, vertical: 'top', wrapText: true };
+            cell.border = { ...cell.border, bottom: { style: 'thin', color: { argb: REPORT_COLOURS.border } } };
+            if ((rowNumber - dataStartRow) % 2 === 1)
+                solidFill(cell, REPORT_COLOURS.surface);
+        }
+    }
+}
+function applyStatusBadges(pageSheet, manualSheet) {
+    for (let rowNumber = 5; rowNumber <= pageSheet.rowCount; rowNumber += 1) {
+        const cell = pageSheet.getCell(rowNumber, 2);
+        const status = valueText(cell.value);
+        if (status === 'Completed')
+            styleBadge(cell, REPORT_COLOURS.manual, 'FF137333');
+        else if (status === 'Partial')
+            styleBadge(cell, REPORT_COLOURS.review, 'FF7A4F01');
+        else
+            styleBadge(cell, REPORT_COLOURS.confirmed, REPORT_COLOURS.serious);
+    }
+    for (let rowNumber = 5; rowNumber <= manualSheet.rowCount; rowNumber += 1) {
+        styleBadge(manualSheet.getCell(rowNumber, 6), REPORT_COLOURS.review, 'FF7A4F01');
+    }
+}
 async function writeExcelReport(summary, options) {
+    assertCanonicalAuditSummary(summary);
     const templatePath = options.templatePath ?? DEFAULT_TEMPLATE;
     await assertCanonicalTemplate(templatePath);
     const workbook = new excel.Workbook();
@@ -155575,7 +158456,7 @@ async function writeExcelReport(summary, options) {
     const lookup = getLookup(lookupSheet);
     const findingTemplate = prepareRows(findingsSheet, 7, 7, 25);
     summary.findings.forEach((finding, index) => {
-        writeStyledRow(findingsSheet, index + 7, reportRowValues(finding, findingId(index), criterionEntries(finding, lookup), options.outputPath), findingTemplate);
+        writeStyledRow(findingsSheet, index + 7, reportRowValues(finding, findingId(finding, index), criterionEntries(finding, lookup), options.outputPath), findingTemplate);
     });
     findingsSheet.autoFilter = {
         from: { row: 6, column: 1 },
@@ -155585,6 +158466,14 @@ async function writeExcelReport(summary, options) {
     populatePageInventory(pageSheet, summary);
     populateEvidence(evidenceSheet, summary, options.outputPath);
     populateManualChecks(manualSheet, summary);
+    populateCriteria(workbook, summary);
+    applySummaryPresentation(summarySheet);
+    applyFindingPresentation(findingsSheet, summary.findings);
+    applySupportingSheetPresentation(pageSheet, 4, 5, 7, 2);
+    applySupportingSheetPresentation(evidenceSheet, 4, 5, 9, 2);
+    applySupportingSheetPresentation(manualSheet, 4, 5, 7, 2);
+    applySupportingSheetPresentation(lookupSheet, 3, 4, 4);
+    applyStatusBadges(pageSheet, manualSheet);
     workbook.creator = summary.auditor;
     workbook.lastModifiedBy = summary.auditor;
     workbook.created = new Date(summary.generatedAt);
@@ -155594,222 +158483,6 @@ async function writeExcelReport(summary, options) {
     return options.outputPath;
 }
 //# sourceMappingURL=excel.js.map
-;// CONCATENATED MODULE: ./dist/reporting/cell-text.js
-function scalarText(value) {
-    if (value === null || value === undefined)
-        return '';
-    if (typeof value === 'string')
-        return value.trim();
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint')
-        return String(value).trim();
-    if (value instanceof Date)
-        return value.toISOString();
-    if (typeof value !== 'object')
-        return '';
-    const record = value;
-    if (typeof record.text === 'string')
-        return record.text.trim();
-    if ('result' in record)
-        return scalarText(record.result);
-    if (Array.isArray(record.richText)) {
-        return record.richText
-            .map((part) => scalarText(part))
-            .filter(Boolean)
-            .join(' ')
-            .trim();
-    }
-    return '';
-}
-/** Returns useful displayed/scalar text without serialising ExcelJS value objects as "[object Object]". */
-function cellText(cell) {
-    const valueText = scalarText(cell.value);
-    if (valueText)
-        return valueText;
-    const renderedText = scalarText(cell.text);
-    return renderedText === '[object Object]' ? '' : renderedText;
-}
-//# sourceMappingURL=cell-text.js.map
-;// CONCATENATED MODULE: ./dist/reporting/validate.js
-
-
-
-
-const EXPECTED_REPORT_HEADERS = [
-    'Finding ID', 'Evidence type', 'Status', 'Severity', 'WCAG criterion', 'Level', 'WCAG title',
-    'Affected URL(s)', 'Viewport(s)', 'Component', 'Location', 'Summary', 'Issue', 'User impact',
-    'Technical locator', 'Test method', 'Actual result', 'Expected result', 'Recommendation', 'Owner',
-    'Effort', 'Screenshot', 'Rule ID', 'Labels', 'Translation review'
-];
-const EXPECTED_WORKSHEETS = [
-    'Audit Summary',
-    'Findings',
-    'Page Inventory',
-    'Evidence',
-    'Manual Checks',
-    'WCAG 2.2 Reference'
-];
-const expectedHeaders = new Map([
-    ['Findings', { row: 6, values: EXPECTED_REPORT_HEADERS }],
-    ['Page Inventory', { row: 4, values: ['URL', 'Audit state', 'Viewports planned', 'Viewports completed', 'Consent handling', 'Runtime errors', 'Notes'] }],
-    ['Evidence', { row: 4, values: ['Evidence path', 'Finding ID', 'Page URL', 'Viewport', 'Rule ID', 'Component', 'Technical locator', 'Evidence type', 'Detail'] }],
-    ['Manual Checks', { row: 4, values: ['Check ID', 'Manual check', 'WCAG criterion', 'Applies to', 'Procedure', 'Status', 'Reviewer notes'] }],
-    ['WCAG 2.2 Reference', { row: 3, values: ['Success criterion', 'Level', 'Title', 'Understanding link'] }]
-]);
-const expectedTabColors = new Map([
-    ['Audit Summary', 'FF17365D'],
-    ['Findings', 'FFC00000'],
-    ['Page Inventory', 'FF4472C4'],
-    ['Evidence', 'FF548235'],
-    ['Manual Checks', 'FFBF9000'],
-    ['WCAG 2.2 Reference', 'FF7F7F7F']
-]);
-const allowedClassifications = new Set(['confirmed', 'review', 'blocker', 'manual']);
-const allowedStatuses = new Set(['Open', 'In progress', 'Resolved', 'Risk accepted', 'Not applicable']);
-const allowedSeverities = new Set(['Critical', 'Serious', 'Moderate', 'Minor', 'Advisory']);
-function cellHyperlink(value) {
-    return typeof value === 'object' && value !== null && 'hyperlink' in value
-        ? String(value.hyperlink ?? '').trim()
-        : '';
-}
-function validateTemplateShape(workbook, errors) {
-    const names = workbook.worksheets.map((worksheet) => worksheet.name);
-    if (names.join('|') !== EXPECTED_WORKSHEETS.join('|')) {
-        errors.push(`Worksheet names and order must be exactly: ${EXPECTED_WORKSHEETS.join(', ')}.`);
-    }
-    for (const [name, expected] of expectedHeaders) {
-        const worksheet = workbook.getWorksheet(name);
-        if (!worksheet)
-            continue;
-        const actual = expected.values.map((_, index) => cellText(worksheet.getRow(expected.row).getCell(index + 1)));
-        if (actual.join('|') !== expected.values.join('|'))
-            errors.push(`${name} header row does not match the CarlasHub template.`);
-    }
-    for (const [name, color] of expectedTabColors) {
-        if (workbook.getWorksheet(name)?.properties.tabColor?.argb !== color) {
-            errors.push(`${name} worksheet tab colour does not match the CarlasHub template.`);
-        }
-    }
-}
-async function validateRelativeEvidenceLink(workbookPath, hyperlink, location, errors) {
-    let decoded = '';
-    try {
-        decoded = decodeURIComponent(hyperlink);
-    }
-    catch {
-        errors.push(`${location} contains an invalid evidence hyperlink.`);
-        return;
-    }
-    const segments = decoded.replaceAll('\\', '/').split('/');
-    if (!decoded || segments.includes('..') || (0,external_node_path_.isAbsolute)(decoded) || /^file:/i.test(decoded) || /^[a-z]:[\\/]/i.test(decoded)) {
-        errors.push(`${location} must use a relative evidence hyperlink.`);
-        return;
-    }
-    try {
-        await (0,promises_.access)((0,external_node_path_.resolve)((0,external_node_path_.dirname)(workbookPath), decoded));
-    }
-    catch {
-        errors.push(`${location} points to an evidence file that is not available beside the workbook.`);
-    }
-}
-function validateHttpCell(cell, label, errors) {
-    const url = cellText(cell);
-    if (!/^https?:\/\/\S+$/i.test(url))
-        errors.push(`${label} must contain one HTTP(S) URL.`);
-    if (cellHyperlink(cell.value) !== url)
-        errors.push(`${label} must link to the same URL displayed in the cell.`);
-}
-async function validateExcelReport(path) {
-    const workbook = new excel.Workbook();
-    await workbook.xlsx.readFile(path);
-    const errors = [];
-    const warnings = [];
-    validateTemplateShape(workbook, errors);
-    for (const name of EXPECTED_WORKSHEETS) {
-        if (!workbook.getWorksheet(name))
-            errors.push(`Missing ${name} worksheet.`);
-    }
-    const findings = workbook.getWorksheet('Findings');
-    let findingRows = 0;
-    if (findings) {
-        for (let rowNumber = 7; rowNumber <= findings.rowCount; rowNumber += 1) {
-            const row = findings.getRow(rowNumber);
-            if (!cellText(row.getCell(1)))
-                continue;
-            findingRows += 1;
-            if (!/^A11Y\d{3,}$/.test(cellText(row.getCell(1))))
-                errors.push(`Findings!A${rowNumber} must contain a generated finding ID.`);
-            if (!allowedClassifications.has(cellText(row.getCell(2))))
-                errors.push(`Findings!B${rowNumber} contains an unsupported evidence type.`);
-            if (!allowedStatuses.has(cellText(row.getCell(3))))
-                errors.push(`Findings!C${rowNumber} contains an unsupported status.`);
-            if (!allowedSeverities.has(cellText(row.getCell(4))))
-                errors.push(`Findings!D${rowNumber} contains an unsupported severity.`);
-            for (let column = 1; column <= EXPECTED_REPORT_HEADERS.length; column += 1) {
-                if (!cellText(row.getCell(column)))
-                    errors.push(`Required finding cell ${row.getCell(column).address} is empty.`);
-            }
-            const screenshot = cellText(row.getCell(22));
-            const screenshotLink = cellHyperlink(row.getCell(22).value);
-            if (screenshot !== 'Not captured') {
-                if (!screenshotLink)
-                    errors.push(`Findings!V${rowNumber} must contain a relative evidence hyperlink or “Not captured”.`);
-                else
-                    await validateRelativeEvidenceLink(path, screenshotLink, `Findings!V${rowNumber}`, errors);
-            }
-        }
-    }
-    if (findingRows === 0)
-        warnings.push('The workbook contains no finding rows.');
-    const pages = workbook.getWorksheet('Page Inventory');
-    if (pages) {
-        const seen = new Set();
-        for (let rowNumber = 5; rowNumber <= pages.rowCount; rowNumber += 1) {
-            const cell = pages.getRow(rowNumber).getCell(1);
-            if (!cellText(cell))
-                continue;
-            validateHttpCell(cell, `Page Inventory!A${rowNumber}`, errors);
-            if (seen.has(cellText(cell)))
-                errors.push(`Page Inventory!A${rowNumber} duplicates an earlier URL.`);
-            seen.add(cellText(cell));
-        }
-    }
-    const evidence = workbook.getWorksheet('Evidence');
-    let evidenceRows = 0;
-    let imageInventoryRows = 0;
-    if (evidence) {
-        for (let rowNumber = 5; rowNumber <= evidence.rowCount; rowNumber += 1) {
-            const row = evidence.getRow(rowNumber);
-            if (!Array.from({ length: 9 }, (_, index) => cellText(row.getCell(index + 1))).some(Boolean))
-                continue;
-            evidenceRows += 1;
-            for (let column = 1; column <= 9; column += 1) {
-                if (!cellText(row.getCell(column)))
-                    errors.push(`Required evidence cell ${row.getCell(column).address} is empty.`);
-            }
-            validateHttpCell(row.getCell(3), `Evidence!C${rowNumber}`, errors);
-            const reference = cellText(row.getCell(1));
-            const hyperlink = cellHyperlink(row.getCell(1).value);
-            if (reference !== 'Not captured') {
-                imageInventoryRows += 1;
-                if (!hyperlink)
-                    errors.push(`Evidence!A${rowNumber} must contain a relative evidence hyperlink or “Not captured”.`);
-                else
-                    await validateRelativeEvidenceLink(path, hyperlink, `Evidence!A${rowNumber}`, errors);
-            }
-        }
-    }
-    const embeddedImages = workbook.worksheets.reduce((total, worksheet) => total + worksheet.getImages().length, 0);
-    if (embeddedImages)
-        errors.push(`Workbook contains ${embeddedImages} embedded image(s); evidence must remain linked to keep it portable and lightweight.`);
-    const summary = workbook.getWorksheet('Audit Summary');
-    const auditor = summary ? cellText(summary.getCell('B6')) : '';
-    if (!auditor)
-        errors.push('Auditor is empty in Audit Summary!B6.');
-    if (summary)
-        validateHttpCell(summary.getCell('B8'), 'Audit Summary!B8', errors);
-    return { valid: errors.length === 0, findingRows, evidenceRows, imageInventoryRows, errors, warnings, auditor };
-}
-//# sourceMappingURL=validate.js.map
 // EXTERNAL MODULE: external "node:fs"
 var external_node_fs_ = __nccwpck_require__(73024);
 // EXTERNAL MODULE: ./node_modules/archiver/index.js
@@ -155851,7 +158524,12 @@ async function createAuditArchive(outputDir, reportPath, htmlPath, jsonPath) {
 ;// CONCATENATED MODULE: ./dist/reporting/html.js
 
 
+
+
 const STATUS_LABELS = {
+    passed: 'Passed by available evidence',
+    failed: 'Failed',
+    inconclusive: 'Inconclusive',
     'confirmed-passed': 'Passed',
     'confirmed-failed': 'Failed',
     'tested-inconclusive': 'Inconclusive',
@@ -155907,7 +158585,15 @@ function findingRows(summary, outputPath) {
             .join('');
         const pages = finding.urls.map((url) => `<li>${html_link(url)}</li>`).join('');
         const selectors = finding.selectors.map((selector) => `<li><code>${escapeHtml(selector)}</code></li>`).join('');
-        return `<tr data-search="${escapeHtml([
+        const id = findingId(finding, index);
+        const impact = finding.classification === 'confirmed'
+            ? { css: `severity-${finding.severity.toLowerCase()}`, label: finding.severity }
+            : finding.classification === 'review'
+                ? { css: 'badge-review', label: `Review priority: ${finding.severity}` }
+                : finding.classification === 'blocker'
+                    ? { css: 'badge-blocker', label: 'Coverage blocked' }
+                    : { css: 'badge-manual', label: 'Human check' };
+        return `<tr id="finding-${escapeHtml(id)}" data-search="${escapeHtml([
             finding.ruleId,
             finding.summary,
             finding.issue,
@@ -155916,22 +158602,27 @@ function findingRows(summary, outputPath) {
             finding.classification,
             finding.severity,
             ...finding.wcag,
+            ...(finding.standards ?? []),
             ...finding.urls
         ].filter(Boolean).join(' ').toLowerCase())}" data-classification="${escapeHtml(finding.classification)}" data-severity="${escapeHtml(finding.severity)}">
-      <td><span class="finding-id">A11Y-${String(index + 1).padStart(3, '0')}</span><br><span class="muted">${escapeHtml(finding.ruleId)}</span></td>
+      <td><span class="finding-id">${escapeHtml(id)}</span><br><span class="muted">${escapeHtml(finding.ruleId)}</span></td>
       <td><span class="badge badge-${escapeHtml(finding.classification)}">${escapeHtml(finding.classification)}</span></td>
-      <td><span class="badge severity-${escapeHtml(finding.severity.toLowerCase())}">${escapeHtml(finding.severity)}</span></td>
+      <td><span class="badge ${escapeHtml(impact.css)}">${escapeHtml(impact.label)}</span></td>
       <td><strong>${escapeHtml(finding.summary)}</strong><p>${escapeHtml(finding.issue)}</p>
         <details><summary>Impact, testing and remediation</summary>
-          <h4>Impact</h4><p>${escapeHtml(finding.impact)}</p>
-          <h4>How to verify</h4><p>${escapeHtml(finding.testing)}</p>
-          <h4>Recommended remediation</h4><p>${escapeHtml(finding.remediation)}</p>
-          <h4>Component</h4><p>${escapeHtml(finding.componentName || finding.component)}${finding.componentLocation ? ` — ${escapeHtml(finding.componentLocation)}` : ''}</p>
-          ${selectors ? `<h4>Selectors</h4><ul>${selectors}</ul>` : ''}
-          ${screenshots ? `<h4>Evidence</h4><ul>${screenshots}</ul>` : ''}
+          <h3>Impact</h3><p>${escapeHtml(finding.impact)}</p>
+          <h3>How to verify</h3><p>${escapeHtml(finding.testing)}</p>
+          <h3>Recommended remediation</h3><p>${escapeHtml(finding.remediation)}</p>
+          <h3>Component</h3><p>${escapeHtml(finding.componentName || finding.component)}${finding.componentLocation ? ` — ${escapeHtml(finding.componentLocation)}` : ''}</p>
+          ${selectors ? `<h3>Selectors</h3><ul>${selectors}</ul>` : ''}
+          ${screenshots ? `<h3>Evidence</h3><ul>${screenshots}</ul>` : ''}
         </details>
       </td>
-      <td>${finding.wcag.length ? finding.wcag.map((criterion) => `<span class="criterion">${escapeHtml(criterion)}</span>`).join(' ') : '<span class="muted">Advisory</span>'}</td>
+      <td>${finding.standards?.length
+            ? finding.standards.map((standard) => `<span class="criterion">${escapeHtml(standard)}</span>`).join(' ')
+            : finding.wcag.length
+                ? finding.wcag.map((criterion) => `<span class="criterion">${escapeHtml(criterion)}</span>`).join(' ')
+                : '<span class="muted">Advisory</span>'}</td>
       <td><ul>${pages}</ul></td>
     </tr>`;
     }).join('');
@@ -155945,24 +158636,43 @@ function pageRows(summary) {
         const viewports = page?.viewports.map((item) => item.viewport.name) ?? [];
         const errors = page?.viewports.flatMap((item) => item.errors) ?? [];
         const blockers = page?.viewports.flatMap((item) => item.interactionBlocker?.reason ? [item.interactionBlocker.reason] : []) ?? [];
-        const status = skipped.has(url) ? 'Skipped' : page ? 'Audited' : 'Not started';
+        const status = skipped.has(url) ? 'Skipped' : page?.partial ? 'Partial' : page ? 'Audited' : 'Not started';
         return `<tr><td>${html_link(url)}</td><td><span class="status-dot status-${status.toLowerCase().replace(' ', '-')}"></span>${status}</td><td>${escapeHtml(viewports.join(', ') || '—')}</td><td>${list([skipped.get(url) || '', ...errors, ...blockers], 'None')}</td></tr>`;
     }).join('');
 }
 function coverageRows(summary) {
     return summary.coverage.flatMap((page) => page.viewports.flatMap((viewport) => viewport.assessments.map((assessment) => (`<tr><td>${html_link(page.url)}</td><td>${escapeHtml(viewport.viewport)}</td><td>${escapeHtml(assessment.area.replaceAll('-', ' '))}</td><td><span class="coverage coverage-${escapeHtml(assessment.status)}">${escapeHtml(STATUS_LABELS[assessment.status] || assessment.status)}</span></td><td>${escapeHtml(assessment.detail)}</td></tr>`)))).join('') || '<tr><td colspan="5" class="empty">No coverage results were recorded.</td></tr>';
 }
+function configuredJourneyRows(summary) {
+    return summary.pages.flatMap((page) => page.viewports.flatMap((viewport) => (viewport.keyboard.journeys
+        .filter((journey) => journey.source === 'configured')
+        .map((journey) => `<tr><td>${html_link(page.url)}</td><td>${escapeHtml(viewport.viewport.name)}</td><td><strong>${escapeHtml(journey.title)}</strong><br><span class="muted">${escapeHtml(journey.id)}</span></td><td>${escapeHtml(journey.categories?.join(', ') || 'Not specified')}</td><td><span class="coverage coverage-${escapeHtml(journey.status)}">${escapeHtml(STATUS_LABELS[journey.status] || journey.status)}</span></td><td>${escapeHtml(`${journey.assertionCount ?? 0} assertion(s). ${journey.detail}`)}</td><td>${list(journey.steps, 'No steps completed.')}</td></tr>`)))).join('') || '<tr><td colspan="7" class="empty">No configured task journeys were supplied for this audit.</td></tr>';
+}
 function manualRows(summary) {
-    return summary.manualChecks.map((check) => `<tr><td><span class="finding-id">${escapeHtml(check.id)}</span></td><td><strong>${escapeHtml(check.title)}</strong></td><td>${check.wcag.map((criterion) => `<span class="criterion">${escapeHtml(criterion)}</span>`).join(' ') || 'Advisory'}</td><td>${escapeHtml(check.applicableTo)}</td><td>${escapeHtml(check.procedure)}</td><td><span class="coverage coverage-manual-review-required">Not tested</span></td></tr>`).join('') || '<tr><td colspan="6" class="empty">No guided manual checks were generated.</td></tr>';
+    return summary.manualChecks.map((check) => `<tr><td><span class="finding-id">${escapeHtml(check.id)}</span></td><td><strong>${escapeHtml(check.title)}</strong></td><td>${check.wcag.map((criterion) => `<span class="criterion">${escapeHtml(criterion)}</span>`).join(' ') || 'Advisory'}</td><td>${escapeHtml(check.applicableTo)}</td><td>${escapeHtml(check.procedure)}</td><td>${escapeHtml(check.expectedEvidence ?? 'Record the tested scope, method, result, evidence, and reviewer verdict.')}</td><td><span class="coverage coverage-manual-review-required">Not tested</span></td></tr>`).join('') || '<tr><td colspan="7" class="empty">No guided manual checks were generated.</td></tr>';
+}
+function criterionRows(summary) {
+    const criteria = summary.criteria ?? [];
+    return criteria.map((criterion) => {
+        const evidence = [
+            ...criterion.findingIds.map((id) => `<a href="#finding-${escapeHtml(id)}">${escapeHtml(id)}</a>`),
+            ...criterion.automatedEvidence.map((item) => escapeHtml(item))
+        ];
+        const evidenceList = evidence.length ? `<ul>${evidence.map((item) => `<li>${item}</li>`).join('')}</ul>` : '<p>No automated evidence mapped.</p>';
+        return `<tr><td><a href="${escapeHtml(criterion.understandingUrl)}" target="_blank" rel="noopener noreferrer"><span class="finding-id">${escapeHtml(criterion.criterion)}</span></a><br><span class="muted">${escapeHtml(criterion.title)}</span></td><td>${escapeHtml(criterion.level)}</td><td>${escapeHtml(criterion.scope === 'standard' ? 'AA conformance target' : 'AAA advisory')}</td><td><span class="coverage coverage-${escapeHtml(criterion.status)}">${escapeHtml(STATUS_LABELS[criterion.status] || criterion.status)}</span></td><td>${evidenceList}</td><td>${escapeHtml(criterion.detail)}</td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="empty">No criterion ledger was generated.</td></tr>';
 }
 function renderReport(summary, outputPath) {
     const confirmed = count(summary, (finding) => finding.classification === 'confirmed');
     const reviews = count(summary, (finding) => finding.classification === 'review');
     const blockers = count(summary, (finding) => finding.classification === 'blocker');
-    const serious = count(summary, (finding) => finding.severity === 'Critical' || finding.severity === 'Serious');
+    const serious = count(summary, (finding) => finding.classification === 'confirmed' && (finding.severity === 'Critical' || finding.severity === 'Serious'));
     const generated = Number.isNaN(Date.parse(summary.generatedAt)) ? summary.generatedAt : new Date(summary.generatedAt).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' });
     const target = summary.landingPageUrl || summary.requestedUrls[0] || 'Not specified';
-    const conformance = summary.wcagLevel === 'AAA' ? 'WCAG 2.2 Level A, AA and AAA' : 'WCAG 2.2 Level A and AA';
+    const aaaAdvisory = summary.aaaAdvisory ?? summary.wcagLevel === 'AAA';
+    const conformance = `WCAG 2.2 Level A and AA${aaaAdvisory ? ', with separate Level AAA advisory checks' : ''}`;
+    const criteria = summary.criteria ?? [];
+    const unresolvedCriteria = criteria.filter((criterion) => criterion.scope === 'standard' && ['manual-review-required', 'inconclusive'].includes(criterion.status)).length;
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -155971,7 +158681,7 @@ function renderReport(summary, outputPath) {
   <title>Accessibility audit report — ${escapeHtml(target)}</title>
   <style>
     :root{--blue:#1a73e8;--blue-dark:#174ea6;--ink:#202124;--muted:#5f6368;--line:#dadce0;--surface:#f8f9fa;--red:#c5221f;--amber:#b06000;--green:#137333;--shadow:0 1px 2px rgba(60,64,67,.12),0 1px 3px 1px rgba(60,64,67,.08)}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);background:#fff;font:15px/1.55 Arial,"Helvetica Neue",sans-serif}a{color:var(--blue-dark);text-underline-offset:2px}a:hover{text-decoration-thickness:2px}.skip{position:absolute;left:16px;top:-60px;background:#fff;padding:12px 16px;border:2px solid var(--blue);z-index:10}.skip:focus{top:12px}.masthead{border-bottom:1px solid var(--line);background:#fff}.masthead-inner,.page{max-width:1440px;margin:auto;padding-left:32px;padding-right:32px}.masthead-inner{height:72px;display:flex;align-items:center;gap:14px}.mark{width:36px;height:36px;border-radius:9px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700}.brand{font-size:18px;font-weight:600}.brand span{display:block;color:var(--muted);font-size:12px;font-weight:400}.page{padding-top:38px;padding-bottom:64px}.eyebrow{color:var(--blue-dark);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}h1{font-size:38px;line-height:1.15;letter-spacing:-.6px;margin:8px 0 12px}h2{font-size:24px;margin:42px 0 14px;letter-spacing:-.2px}h3{font-size:17px;margin:0 0 10px}h4{font-size:14px;margin:16px 0 4px}.lede{font-size:17px;color:var(--muted);max-width:850px}.meta{display:flex;flex-wrap:wrap;gap:10px 26px;color:var(--muted);margin:20px 0 28px}.meta strong{color:var(--ink)}.notice{border-left:4px solid var(--blue);background:#e8f0fe;border-radius:0 8px 8px 0;padding:15px 18px;margin:26px 0}.notice.warning{border-color:var(--amber);background:#fef7e0}.metrics{display:grid;grid-template-columns:repeat(6,minmax(135px,1fr));gap:14px;margin:28px 0}.metric{border:1px solid var(--line);border-radius:12px;padding:18px;background:#fff;box-shadow:var(--shadow)}.metric strong{display:block;font-size:28px;line-height:1.1;margin-top:6px}.metric span{color:var(--muted);font-size:13px}.metric.attention strong{color:var(--red)}nav{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);margin:28px calc(50% - 50vw);padding:0 max(32px,calc((100vw - 1440px)/2 + 32px));display:flex;gap:22px;overflow:auto}nav a{display:block;padding:14px 0;color:var(--muted);font-weight:600;text-decoration:none;white-space:nowrap}nav a:hover,nav a:focus{color:var(--blue-dark);border-bottom:2px solid var(--blue)}.toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:16px 0}.field{display:grid;gap:5px}.field label{font-size:12px;font-weight:700;color:var(--muted)}input,select{min-height:42px;border:1px solid #9aa0a6;border-radius:6px;background:#fff;color:var(--ink);padding:8px 11px;font:inherit}input{width:min(420px,80vw)}input:focus,select:focus{outline:3px solid #d2e3fc;border-color:var(--blue)}.result-count{margin-left:auto;color:var(--muted);padding-bottom:10px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;min-width:900px}caption{text-align:left;padding:14px 16px;background:var(--surface);font-weight:600}th{position:sticky;top:0;background:#f1f3f4;text-align:left;font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:#3c4043}th,td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:top}tr:last-child td{border-bottom:0}tbody tr:hover{background:#f8fbff}td p{margin:5px 0}td ul{margin:0;padding-left:18px}.finding-id{font-weight:700;white-space:nowrap}.muted{color:var(--muted);font-size:13px}.badge,.criterion,.coverage{display:inline-block;border-radius:999px;font-size:12px;font-weight:700;line-height:1.4;padding:3px 8px;white-space:nowrap}.badge-confirmed,.severity-critical,.severity-serious,.coverage-confirmed-failed{color:#a50e0e;background:#fce8e6}.badge-review,.severity-moderate,.coverage-tested-inconclusive,.coverage-manual-review-required,.coverage-not-tested{color:#8a4b00;background:#fef7e0}.badge-blocker{color:#fff;background:var(--red)}.badge-manual,.severity-minor,.severity-advisory,.coverage-not-applicable{color:#3c4043;background:#f1f3f4}.coverage-confirmed-passed{color:#0d652d;background:#e6f4ea}.criterion{margin:1px;color:#174ea6;background:#e8f0fe}details{margin-top:9px}summary{cursor:pointer;color:var(--blue-dark);font-weight:600}code{white-space:normal;overflow-wrap:anywhere;background:#f1f3f4;border-radius:3px;padding:1px 4px}.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:#9aa0a6}.status-audited{background:var(--green)}.status-skipped{background:var(--amber)}.empty{text-align:center;color:var(--muted);padding:32px}.limitations{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{border:1px solid var(--line);border-radius:10px;padding:18px;background:var(--surface)}.panel ul{margin:8px 0;padding-left:20px}.footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);background:#fff;font:15px/1.55 Arial,"Helvetica Neue",sans-serif}a{color:var(--blue-dark);text-underline-offset:2px}a:hover{text-decoration-thickness:2px}:focus-visible{outline:3px solid #8ab4f8;outline-offset:3px}.skip{position:absolute;left:16px;top:-60px;background:#fff;padding:12px 16px;border:2px solid var(--blue);z-index:10}.skip:focus{top:12px}.masthead{border-bottom:1px solid var(--line);background:#fff}.masthead-inner,.page{max-width:1440px;margin:auto;padding-left:32px;padding-right:32px}.masthead-inner{height:72px;display:flex;align-items:center;gap:14px}.mark{width:36px;height:36px;border-radius:9px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700}.brand{font-size:18px;font-weight:600}.brand span{display:block;color:var(--muted);font-size:12px;font-weight:400}.page{padding-top:38px;padding-bottom:64px}.eyebrow{color:var(--blue-dark);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}h1{font-size:38px;line-height:1.15;letter-spacing:-.6px;margin:8px 0 12px}h2{font-size:24px;margin:42px 0 14px;letter-spacing:-.2px}h3{font-size:14px;margin:16px 0 4px}.lede{font-size:17px;color:var(--muted);max-width:850px}.meta{display:flex;flex-wrap:wrap;gap:10px 26px;color:var(--muted);margin:20px 0 28px}.meta strong{color:var(--ink)}.notice{border-left:4px solid var(--blue);background:#e8f0fe;border-radius:0 8px 8px 0;padding:15px 18px;margin:26px 0}.notice.warning{border-color:var(--amber);background:#fef7e0}.metrics{display:grid;grid-template-columns:repeat(6,minmax(135px,1fr));gap:14px;margin:28px 0}.metric{border:1px solid var(--line);border-radius:12px;padding:18px;background:#fff;box-shadow:var(--shadow)}.metric strong{display:block;font-size:28px;line-height:1.1;margin-top:6px}.metric span{color:var(--muted);font-size:13px}.metric.attention strong{color:var(--red)}nav{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);margin:28px calc(50% - 50vw);padding:0 max(32px,calc((100vw - 1440px)/2 + 32px));display:flex;gap:22px;overflow:auto}nav a{display:block;padding:14px 0;color:var(--muted);font-weight:600;text-decoration:none;white-space:nowrap}nav a:hover,nav a:focus{color:var(--blue-dark);border-bottom:2px solid var(--blue)}.toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:16px 0}.field{display:grid;gap:5px}.field label{font-size:12px;font-weight:700;color:var(--muted)}input,select{min-height:42px;border:1px solid #9aa0a6;border-radius:6px;background:#fff;color:var(--ink);padding:8px 11px;font:inherit}input{width:min(420px,80vw)}input:focus,select:focus{outline:3px solid #d2e3fc;border-color:var(--blue)}.result-count{margin-left:auto;color:var(--muted);padding-bottom:10px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;min-width:900px}caption{text-align:left;padding:14px 16px;background:var(--surface);font-weight:600}th{position:sticky;top:0;background:#f1f3f4;text-align:left;font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:#3c4043}th,td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:top}tr:last-child td{border-bottom:0}tbody tr:hover{background:#f8fbff}td p{margin:5px 0}td ul{margin:0;padding-left:18px}.finding-id{font-weight:700;white-space:nowrap}.muted{color:var(--muted);font-size:13px}.badge,.criterion,.coverage{display:inline-block;border-radius:999px;font-size:12px;font-weight:700;line-height:1.4;padding:3px 8px;white-space:nowrap}.badge-confirmed,.severity-critical,.severity-serious,.coverage-confirmed-failed,.coverage-failed{color:#a50e0e;background:#fce8e6}.badge-review,.severity-moderate,.coverage-tested-inconclusive,.coverage-manual-review-required,.coverage-not-tested,.coverage-inconclusive{color:#8a4b00;background:#fef7e0}.badge-blocker{color:#fff;background:var(--red)}.badge-manual,.severity-minor,.severity-advisory,.coverage-not-applicable{color:#3c4043;background:#f1f3f4}.coverage-confirmed-passed,.coverage-passed{color:#0d652d;background:#e6f4ea}.criterion{margin:1px;color:#174ea6;background:#e8f0fe}details{margin-top:9px}summary{cursor:pointer;color:var(--blue-dark);font-weight:600}code{white-space:normal;overflow-wrap:anywhere;background:#f1f3f4;border-radius:3px;padding:1px 4px}.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:#9aa0a6}.status-audited{background:var(--green)}.status-partial,.status-skipped{background:var(--amber)}.empty{text-align:center;color:var(--muted);padding:32px}.limitations{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{border:1px solid var(--line);border-radius:10px;padding:18px;background:var(--surface)}.panel ul{margin:8px 0;padding-left:20px}.footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
     @media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr)}.limitations{grid-template-columns:1fr}.masthead-inner,.page{padding-left:18px;padding-right:18px}h1{font-size:31px}.result-count{width:100%;margin-left:0}}
     @media print{nav,.toolbar,.skip{display:none}.page{max-width:none;padding:20px}.metrics{grid-template-columns:repeat(3,1fr)}.metric{box-shadow:none}details{display:block}details>summary{display:none}.table-wrap{overflow:visible}table{min-width:0;font-size:10px}th{position:static}a{color:inherit;text-decoration:none}}
   </style>
@@ -155984,27 +158694,30 @@ function renderReport(summary, outputPath) {
     <h1>Accessibility audit report</h1>
     <p class="lede">A structured review of ${html_link(target)} against ${escapeHtml(conformance)}, combining automated browser evidence with a defined manual-assessment plan.</p>
     <div class="meta"><span><strong>Generated:</strong> ${escapeHtml(generated)} UTC</span><span><strong>Auditor:</strong> ${escapeHtml(summary.auditor)}</span><span><strong>Source:</strong> ${escapeHtml(sourceLabel(summary.source))}</span></div>
-    <div class="notice warning"><strong>Conformance note:</strong> Automated testing cannot certify WCAG conformance. Confirmed failures require remediation, review findings require a human decision, and every manual check below remains part of the audit.</div>
+    <div class="notice warning"><strong>Conformance decision: ${escapeHtml(summary.conformanceDecision === 'not-determined' || !summary.conformanceDecision ? 'Not determined' : summary.conformanceDecision)}.</strong> Automated evidence cannot certify WCAG conformance. A qualified human assessment and sign-off remain mandatory; failures require remediation and unresolved outcomes are not passes.</div>
     <section class="metrics" aria-label="Audit summary">
       <div class="metric"><span>Pages audited</span><strong>${summary.auditedUrls.length}</strong></div>
-      <div class="metric"><span>Total findings</span><strong>${summary.findings.length}</strong></div>
+      <div class="metric"><span>Report items</span><strong>${summary.findings.length}</strong></div>
       <div class="metric attention"><span>Confirmed</span><strong>${confirmed}</strong></div>
-      <div class="metric attention"><span>Serious / critical</span><strong>${serious}</strong></div>
+      <div class="metric attention"><span>Confirmed serious / critical</span><strong>${serious}</strong></div>
       <div class="metric"><span>Needs review</span><strong>${reviews}</strong></div>
-      <div class="metric"><span>Manual checks</span><strong>${summary.manualChecks.length}</strong></div>
+      <div class="metric"><span>Unresolved AA criteria</span><strong>${unresolvedCriteria}</strong></div>
     </section>
     ${blockers ? `<div class="notice"><strong>${blockers} audit blocker${blockers === 1 ? '' : 's'}:</strong> review the findings before treating coverage as complete.</div>` : ''}
-    <nav aria-label="Report sections"><a href="#findings">Findings</a><a href="#pages">Pages</a><a href="#coverage">Coverage</a><a href="#manual">Manual checks</a><a href="#method">Method and limitations</a></nav>
+    <nav aria-label="Report sections"><a href="#findings">Findings</a><a href="#criteria">WCAG criteria</a><a href="#pages">Pages</a><a href="#coverage">Coverage</a><a href="#journeys">Task journeys</a><a href="#manual">Manual checks</a><a href="#method">Method and limitations</a></nav>
 
-    <section id="findings" aria-labelledby="findings-title"><h2 id="findings-title">Findings</h2><p class="lede">Search and filter the evidence. Expand a finding for its impact, verification steps, remediation and linked screenshots.</p>
+    <section id="findings" aria-labelledby="findings-title"><h2 id="findings-title">Findings</h2><p class="lede">Confirmed rows are evidence-backed barriers and use impact severity. Review rows are candidates that require human validation; their label is review priority, not a confirmed impact rating. Expand a row for verification steps, remediation and linked evidence.</p>
       <div class="toolbar"><div class="field"><label for="finding-search">Search findings</label><input id="finding-search" type="search" placeholder="Rule, issue, page or WCAG criterion"></div><div class="field"><label for="classification-filter">Classification</label><select id="classification-filter"><option value="">All classifications</option><option value="confirmed">Confirmed</option><option value="review">Review</option><option value="blocker">Blocker</option><option value="manual">Manual</option></select></div><div class="field"><label for="severity-filter">Severity</label><select id="severity-filter"><option value="">All severities</option><option>Critical</option><option>Serious</option><option>Moderate</option><option>Minor</option><option>Advisory</option></select></div><div id="result-count" class="result-count" aria-live="polite"></div></div>
-      <div class="table-wrap"><table><caption>Automated and evidence-backed findings</caption><thead><tr><th scope="col">ID / rule</th><th scope="col">Class</th><th scope="col">Severity</th><th scope="col">Finding</th><th scope="col">WCAG</th><th scope="col">Pages</th></tr></thead><tbody id="finding-rows">${findingRows(summary, outputPath)}</tbody></table></div>
+      <div class="table-wrap"><table><caption>Findings and evidence requiring action or validation</caption><thead><tr><th scope="col">ID / rule</th><th scope="col">Class</th><th scope="col">Impact / priority</th><th scope="col">Finding</th><th scope="col">Standards / rule source</th><th scope="col">Pages</th></tr></thead><tbody id="finding-rows">${findingRows(summary, outputPath)}</tbody></table></div>
     </section>
 
+    <section id="criteria" aria-labelledby="criteria-title"><h2 id="criteria-title">WCAG 2.2 criterion ledger</h2><p class="lede">Every success criterion is accounted for. The AA conformance target covers Levels A and AA; Level AAA appears only as optional advisory scope. ${unresolvedCriteria} criterion outcome${unresolvedCriteria === 1 ? '' : 's'} still require a human decision or more evidence.</p><div class="table-wrap"><table><caption>Criterion-by-criterion status and evidence</caption><thead><tr><th scope="col">Criterion</th><th scope="col">Level</th><th scope="col">Scope</th><th scope="col">Status</th><th scope="col">Evidence</th><th scope="col">Decision note</th></tr></thead><tbody>${criterionRows(summary)}</tbody></table></div></section>
+
     <section id="pages" aria-labelledby="pages-title"><h2 id="pages-title">Page inventory</h2><div class="table-wrap"><table><caption>Requested targets and audit status</caption><thead><tr><th scope="col">URL</th><th scope="col">Status</th><th scope="col">Viewports</th><th scope="col">Notes</th></tr></thead><tbody>${pageRows(summary)}</tbody></table></div></section>
-    <section id="coverage" aria-labelledby="coverage-title"><h2 id="coverage-title">Test coverage</h2><p class="lede">“Manual review”, “inconclusive” and “not tested” are unresolved outcomes—not passes.</p><div class="table-wrap"><table><caption>Coverage by page, viewport and audit area</caption><thead><tr><th scope="col">Page</th><th scope="col">Viewport</th><th scope="col">Area</th><th scope="col">Outcome</th><th scope="col">Evidence note</th></tr></thead><tbody>${coverageRows(summary)}</tbody></table></div></section>
-    <section id="manual" aria-labelledby="manual-title"><h2 id="manual-title">Guided manual checks</h2><p class="lede">Complete these checks with keyboard, screen reader, zoom/reflow and human judgement as applicable.</p><div class="table-wrap"><table><caption>Required human assessment plan</caption><thead><tr><th scope="col">ID</th><th scope="col">Check</th><th scope="col">WCAG</th><th scope="col">Applies to</th><th scope="col">Procedure</th><th scope="col">Status</th></tr></thead><tbody>${manualRows(summary)}</tbody></table></div></section>
-    <section id="method" aria-labelledby="method-title"><h2 id="method-title">Method and limitations</h2><div class="limitations"><div class="panel"><h3>Audit scope</h3><ul><li>${escapeHtml(conformance)}</li><li>${summary.requestedUrls.length} requested URL${summary.requestedUrls.length === 1 ? '' : 's'}; ${summary.auditedUrls.length} audited</li><li>${summary.pages.flatMap((page) => page.viewports).length} page-and-viewport runs</li><li>Automated axe rules plus DOM, keyboard, responsive, disclosure, tab and link checks</li></ul></div><div class="panel"><h3>Known limitations</h3>${list([...summary.limitations, `${summary.manualChecks.length} guided manual check(s) require human completion.`], 'No limitations recorded.')}</div></div></section>
+    <section id="coverage" aria-labelledby="coverage-title"><h2 id="coverage-title">Test execution coverage</h2><p class="lede">This records which checks ran and the evidence they produced; it is not a conformance percentage. “Manual review”, “inconclusive” and “not tested” are unresolved outcomes—not passes.</p><div class="table-wrap"><table><caption>Execution evidence by page, viewport and audit area</caption><thead><tr><th scope="col">Page</th><th scope="col">Viewport</th><th scope="col">Area</th><th scope="col">Outcome</th><th scope="col">Evidence note</th></tr></thead><tbody>${coverageRows(summary)}</tbody></table></div></section>
+    <section id="journeys" aria-labelledby="journeys-title"><h2 id="journeys-title">Configured task journeys</h2><p class="lede">Repeatable keyboard, form, interaction and live-region assertions supplied for this site. A DOM live-region result does not prove the quality of a screen-reader announcement.</p><div class="table-wrap"><table><caption>Site-specific task journey evidence</caption><thead><tr><th scope="col">Page</th><th scope="col">Viewport</th><th scope="col">Journey</th><th scope="col">Areas</th><th scope="col">Outcome</th><th scope="col">Result</th><th scope="col">Completed steps</th></tr></thead><tbody>${configuredJourneyRows(summary)}</tbody></table></div></section>
+    <section id="manual" aria-labelledby="manual-title"><h2 id="manual-title">WCAG 2.2 A/AA human verification</h2><p class="lede">All 55 Level A and AA success criteria have a criterion-specific procedure and evidence prompt. Record an explicit verdict for each applicable criterion; “not tested” is unresolved, not a pass.</p><div class="table-wrap"><table><caption>Criterion-specific human assessment plan</caption><thead><tr><th scope="col">ID</th><th scope="col">Check</th><th scope="col">WCAG</th><th scope="col">Applies to</th><th scope="col">Procedure</th><th scope="col">Evidence to record</th><th scope="col">Status</th></tr></thead><tbody>${manualRows(summary)}</tbody></table></div></section>
+    <section id="method" aria-labelledby="method-title"><h2 id="method-title">Method and limitations</h2><div class="limitations"><div class="panel"><h3>Audit scope</h3><ul><li>${escapeHtml(conformance)}</li>${summary.qualityContract ? `<li>Audit Quality Contract ${escapeHtml(summary.qualityContract.version)}; ${summary.qualityContract.criterionCount} Level A/AA criteria; ${escapeHtml(summary.qualityContract.findingPolicy)} finding policy</li>` : ''}<li>${summary.requestedUrls.length} requested URL${summary.requestedUrls.length === 1 ? '' : 's'}; ${summary.auditedUrls.length} audited</li><li>${summary.pages.flatMap((page) => page.viewports).length} page-and-viewport runs</li><li>Automated axe rules plus DOM, generic and configured keyboard journeys, 200% root-text resizing, text spacing, responsive/reflow, disclosure, tab and link checks</li><li>Native screen-reader transcripts, when supplied, are supporting evidence and do not replace expert assessment</li></ul></div><div class="panel"><h3>Known limitations</h3>${list([...summary.limitations, `${summary.manualChecks.length} guided manual check(s) require human completion.`, 'A qualified human must complete applicable checks and make the final conformance decision.'], 'No limitations recorded.')}</div></div></section>
     <footer class="footer">Generated by CarlasHub Accessibility Audit. Keep this file beside the <code>screenshots</code> folder so evidence links continue to work.</footer>
   </main>
   <script>
@@ -156034,11 +158747,13 @@ function renderReport(summary, outputPath) {
 </html>`;
 }
 async function writeHtmlReport(summary, outputPath) {
+    assertCanonicalAuditSummary(summary);
     await (0,promises_.writeFile)(outputPath, `${renderReport(summary, outputPath)}\n`, 'utf8');
     return outputPath;
 }
 //# sourceMappingURL=html.js.map
 ;// CONCATENATED MODULE: ./dist/service.js
+
 
 
 
@@ -156102,7 +158817,7 @@ async function executeAudit(request) {
         summary.status = 'cancelled';
         summary.cancelledAt = cancelledAt;
         summary.limitations.push('The audit was stopped by the user. Results include only work completed before cancellation.');
-        await (0,promises_.writeFile)(jsonPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+        await writeJsonReport(summary, jsonPath);
         return true;
     };
     await applyLateCancellation();
@@ -156140,6 +158855,7 @@ async function executeAudit(request) {
     });
     const archivePath = await createAuditArchive(options.outputDir, reportPath, htmlPath, jsonPath);
     const completedPageCount = summary.pages.filter((page) => page.viewports.length === options.viewports.length &&
+        !page.partial &&
         page.viewports.every((viewport) => (!viewport.cancelled
             && !viewport.interactionBlocker
             && viewport.axeRun.completed
@@ -156179,6 +158895,8 @@ async function executeAudit(request) {
 
 
 
+
+
 const FAILURE_POLICIES = ['none', 'blockers', 'confirmed', 'critical', 'serious', 'moderate', 'minor'];
 const severityRank = {
     Advisory: 0,
@@ -156202,10 +158920,28 @@ function parseListInput(value, allowCommas = false) {
         if (!Array.isArray(parsed) || parsed.some((item) => typeof item !== 'string')) {
             throw new Error('List inputs using JSON must contain only strings.');
         }
-        return parsed.map((item) => item.trim()).filter(Boolean);
+        return parsed.flatMap((item) => splitUrlListValue(item));
     }
     const separator = allowCommas ? /[\r\n,]+/ : /[\r\n]+/;
-    return trimmed.split(separator).map((item) => item.trim()).filter(Boolean);
+    return trimmed.split(separator).flatMap((item) => splitUrlListValue(item));
+}
+function resolveAllowedHosts(inputs, configuredHosts) {
+    if (configuredHosts.length > 0)
+        return configuredHosts;
+    const hosts = inputs.map((input) => {
+        let parsed;
+        try {
+            parsed = new URL(input);
+        }
+        catch {
+            throw new Error('The GitHub Action urls input accepts explicit HTTP(S) URLs only.');
+        }
+        if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+            throw new Error('The GitHub Action urls input accepts explicit HTTP(S) URLs without embedded credentials only.');
+        }
+        return parsed.hostname.toLowerCase().replace(/\.+$/, '');
+    });
+    return [...new Set(hosts)];
 }
 function parseBooleanInput(value, fallback) {
     if (!value.trim())
@@ -156230,13 +158966,29 @@ function parseWcagLevel(value) {
     }
     return normalized;
 }
-function parsePositiveInteger(value, fallback, name) {
+function parsePositiveInteger(value, fallback, name, maximum) {
     if (!value.trim())
         return fallback;
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 1)
         throw new Error(`${name} must be a positive integer.`);
+    if (maximum !== undefined && parsed > maximum)
+        throw new Error(`${name} must be between 1 and ${maximum}.`);
     return parsed;
+}
+function parseJourneysInput(value) {
+    if (!value.trim())
+        return [];
+    const parsed = JSON.parse(value);
+    const journeys = Array.isArray(parsed)
+        ? parsed
+        : parsed && typeof parsed === 'object' && 'journeys' in parsed
+            ? parsed.journeys
+            : undefined;
+    if (!Array.isArray(journeys)) {
+        throw new Error('journeys must be a JSON array or an object containing a journeys array.');
+    }
+    return resolveOptions({ journeys: journeys }).journeys;
 }
 function evaluateGate(policy, findings = []) {
     if (policy === 'none')
@@ -156266,6 +159018,24 @@ function resolveOutputDirectory(environment, value) {
     if ((0,external_node_path_.isAbsolute)(requested))
         return (0,external_node_path_.resolve)(requested);
     return (0,external_node_path_.resolve)(environment.GITHUB_WORKSPACE || process.cwd(), requested);
+}
+async function loadActionJourneys(environment) {
+    const inline = getInput(environment, 'JOURNEYS');
+    const file = getInput(environment, 'JOURNEYS-FILE');
+    if (inline && file)
+        throw new Error('Use either journeys or journeys-file, not both.');
+    if (inline)
+        return parseJourneysInput(inline);
+    if (!file)
+        return [];
+    const path = (0,external_node_path_.isAbsolute)(file) ? file : (0,external_node_path_.resolve)(environment.GITHUB_WORKSPACE || process.cwd(), file);
+    try {
+        return parseJourneysInput(await (0,promises_.readFile)(path, 'utf8'));
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Could not load journeys-file ${file}: ${message}`);
+    }
 }
 async function setOutput(environment, name, value) {
     const outputFile = environment.GITHUB_OUTPUT;
@@ -156366,13 +159136,14 @@ async function readStoredFindings(jsonPath) {
     const stored = JSON.parse(await (0,promises_.readFile)(jsonPath, 'utf8'));
     return stored.findings ?? [];
 }
-async function runGitHubAction(environment = process.env) {
+async function runGitHubAction(environment = process.env, signal) {
     const inputs = parseListInput(getInput(environment, 'URLS'));
     if (!inputs.length)
         throw new Error('The urls input must include at least one URL, with one URL per line.');
     const outputDir = resolveOutputDirectory(environment, getInput(environment, 'OUTPUT-DIR'));
-    const allowedHosts = parseListInput(getInput(environment, 'ALLOWED-HOSTS'), true);
+    const allowedHosts = resolveAllowedHosts(inputs, parseListInput(getInput(environment, 'ALLOWED-HOSTS'), true));
     const failurePolicy = parseFailurePolicy(getInput(environment, 'FAIL-ON'));
+    const journeys = await loadActionJourneys(environment);
     const templatePath = environment.GITHUB_ACTION_PATH
         ? (0,external_node_path_.resolve)(environment.GITHUB_ACTION_PATH, 'assets', 'accessibility-report-template.xlsx')
         : undefined;
@@ -156382,6 +159153,7 @@ async function runGitHubAction(environment = process.env) {
         options: {
             auditor: getInput(environment, 'AUDITOR') || 'GitHub Actions',
             wcagLevel: parseWcagLevel(getInput(environment, 'WCAG-LEVEL')),
+            aaaAdvisory: parseBooleanInput(getInput(environment, 'AAA-ADVISORY'), false),
             outputDir,
             ...(getInput(environment, 'LANDING-PAGE-URL') ? { landingPageUrl: getInput(environment, 'LANDING-PAGE-URL') } : {}),
             allowedHosts,
@@ -156389,12 +159161,14 @@ async function runGitHubAction(environment = process.env) {
             headless: true,
             autoInstallBrowser: parseBooleanInput(getInput(environment, 'AUTO-INSTALL-BROWSER'), true),
             timeoutMs: parsePositiveInteger(getInput(environment, 'TIMEOUT-MS'), 30_000, 'timeout-ms'),
-            concurrency: parsePositiveInteger(getInput(environment, 'CONCURRENCY'), 2, 'concurrency'),
+            concurrency: parsePositiveInteger(getInput(environment, 'CONCURRENCY'), 2, 'concurrency', 8),
             captureScreenshots: parseBooleanInput(getInput(environment, 'CAPTURE-SCREENSHOTS'), true),
+            journeys,
             ...(getInput(environment, 'BROWSER-CHANNEL') ? { channel: getInput(environment, 'BROWSER-CHANNEL') } : {}),
             ...(templatePath ? { templatePath } : {})
         },
         execution: {
+            ...(signal ? { signal } : {}),
             onProgress: (event) => { process.stdout.write(`${formatProgress(event)}\n`); }
         }
     });
@@ -156449,5 +159223,31 @@ function reportActionFailure(error) {
 //# sourceMappingURL=github-action.js.map
 ;// CONCATENATED MODULE: ./dist/action-entry.js
 
-runGitHubAction().catch(reportActionFailure);
+const abortController = new AbortController();
+let stopRequested = false;
+const stopGracefully = () => {
+    if (stopRequested) {
+        process.stderr.write('Second interrupt received; exiting immediately.\n');
+        process.exit(130);
+    }
+    stopRequested = true;
+    process.stderr.write('Stop requested. Closing browser work and writing partial audit artifacts.\n');
+    abortController.abort('GitHub Action cancelled');
+};
+process.on('SIGINT', stopGracefully);
+process.on('SIGTERM', stopGracefully);
+runGitHubAction(process.env, abortController.signal)
+    .then((result) => {
+    // A signal can arrive after the audit result is assembled while the Action is
+    // still writing its summary and outputs. The process-level signal state is
+    // authoritative so a cancelled workflow never reports a successful exit.
+    if (stopRequested || abortController.signal.aborted || result.status === 'cancelled') {
+        process.exitCode = 130;
+    }
+})
+    .catch(reportActionFailure)
+    .finally(() => {
+    process.off('SIGINT', stopGracefully);
+    process.off('SIGTERM', stopGracefully);
+});
 //# sourceMappingURL=action-entry.js.map

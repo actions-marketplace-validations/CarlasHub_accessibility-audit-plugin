@@ -1,0 +1,66 @@
+{
+  "name": "CarlasHub BuggyLand public regression baseline",
+  "urls": [
+    "https://carlashub.github.io/buggyland/",
+    "https://carlashub.github.io/buggyland/#special",
+    "https://carlashub.github.io/buggyland/page2.html",
+    "https://carlashub.github.io/buggyland/page2.html#special"
+  ],
+  "viewports": [
+    "desktop",
+    "mobile",
+    "reflow-320"
+  ],
+  "fixturePages": [
+    {
+      "url": "https://carlashub.github.io/buggyland/",
+      "cards": 55,
+      "examples": 110
+    },
+    {
+      "url": "https://carlashub.github.io/buggyland/page2.html",
+      "cards": 31,
+      "examples": 62
+    }
+  ],
+  "qualityContract": {
+    "version": "1.2.0",
+    "standard": "WCAG 2.2",
+    "conformanceTarget": "A/AA",
+    "criterionCount": 55,
+    "findingPolicy": "evidence-gated",
+    "guarantees": [
+      "failure-isolation",
+      "traceable-evidence",
+      "lossless-deduplication",
+      "deterministic-output"
+    ]
+  },
+  "baselineRationale": "Evidence-gated baseline: unsupported overlap and diagnostic-only review candidates were removed; three repeat-confirmed clipping defects with meaningful content are retained as confirmed failures, and an unmapped broken-fragment result remains review-only rather than being reported as a confirmed WCAG failure.",
+  "classifications": {
+    "confirmed": 34,
+    "review": 22,
+    "blocker": 1,
+    "manualChecks": 55,
+    "totalFindings": 57
+  },
+  "fullyCompletedPages": 2,
+  "partialPages": 2,
+  "blockerSelector": "div.modal-backdrop",
+  "configuredJourneys": {
+    "ids": [
+      "theme-toggle-keyboard",
+      "form-error-announcement",
+      "form-keyboard-entry",
+      "custom-tabs-keyboard",
+      "modal-initial-focus",
+      "modal-escape-key",
+      "toast-announcement"
+    ],
+    "passed": 12,
+    "failed": 30,
+    "inconclusive": 0,
+    "total": 42
+  },
+  "findingIdentitySha256": "999ef81e46adc5199d8a6b8b12b975e20cc65c17d9b560e0611cd40a54ddb350"
+}
