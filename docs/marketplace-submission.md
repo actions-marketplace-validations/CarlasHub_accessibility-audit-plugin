@@ -27,6 +27,7 @@ npm run build:marketplace
 npm run validate:marketplace
 npm run test:marketplace
 npm run test:marketplace-compatibility
+npm run package:release-bundles
 npm pack --dry-run
 git diff --exit-code -- action/dist
 git diff --exit-code -- marketplace
@@ -42,9 +43,11 @@ Generated payloads must not be edited by hand. Re-run `npm run build:marketplace
 
 1. Review the final diff and confirm that it contains no credentials, cookies, private URLs, captured page content, or private screenshots.
 2. Merge the approved change to the default branch.
-3. Create an immutable version tag and GitHub release from the tested commit.
-4. Attach the generated release archive when a client or marketplace requires a downloadable package.
-5. Follow each client marketplace's current review process, using this repository and release tag as the source.
+3. Create an immutable version tag that exactly equals `v<package.json version>` from the tested commit and wait for the release-tag workflow to pass. A mismatched tag stops before packaging or attestation.
+4. Download the `attested-release-<tag>` workflow artifact. It contains versioned client archives, stable filename aliases, SHA-256 files, and the reproducible CycloneDX 1.6 production-dependency SBOM; the workflow does not publish a release automatically.
+5. Verify each archive with its SHA-256 file and `gh attestation verify <archive> --repo CarlasHub/accessibility-audit-plugin` before distribution.
+6. Create the GitHub release from the same tag and attach the reviewed versioned archives, stable archive aliases, their checksums, and the SBOM. Keep every stable alias byte-identical to its versioned archive so `releases/latest/download/...` installation links stay current.
+7. Follow each client marketplace's current review process, using this repository, immutable release tag, and attestations as the source.
 
 The public listing should link to [Privacy](../PRIVACY.md), [Terms](../TERMS.md), [Security](../SECURITY.md), and [Support](../SUPPORT.md). Use the repository issue tracker for non-sensitive bugs and the security policy for vulnerabilities.
 
@@ -78,13 +81,15 @@ A skills-only submission is not equivalent to the local plugin because this skil
 
 ## Suggested reviewer test cases
 
-1. Audit one non-sensitive public staging page and confirm the pre-run scope and auditor prompt.
-2. Audit two explicit pages and confirm that the plugin does not crawl beyond them.
-3. Generate and open the ZIP; verify all seven workbook sheets and relative evidence links.
-4. Confirm that review and manual records are not presented as proven failures or automated passes.
-5. Cancel a run once and confirm that valid partial JSON, XLSX, and ZIP outputs are preserved.
-6. Supply a disallowed host and confirm the request is rejected before browser testing.
-7. Confirm that credentials are redacted from logs and are absent from the workbook and JSON output.
+1. Give the plugin one non-sensitive public staging URL and confirm it offers guided discovery and manual scope.
+2. Choose discovery and confirm it lists unique exact-origin pages with jobs, categories, tags, archives, search, utility, and query variants unchecked by default.
+3. Select a subset and confirm the pre-run scope contains only those pages; then confirm the auditor prompt.
+4. In a separate run, choose manual scope and confirm two explicit pages remain the fixed audit boundary.
+5. Generate and open the ZIP; verify all seven workbook sheets and relative evidence links.
+6. Confirm that review and manual records are not presented as proven failures or automated passes.
+7. Cancel a run once and confirm that valid partial JSON, XLSX, and ZIP outputs are preserved.
+8. Supply a disallowed host and confirm the request is rejected before discovery or browser testing.
+9. Confirm that credentials are redacted from logs and are absent from the workbook and JSON output.
 
 Use synthetic or intentionally public test pages. Never attach private screenshots, cookies, authorization headers, or proprietary page content to a public submission.
 

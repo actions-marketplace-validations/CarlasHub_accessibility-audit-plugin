@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
@@ -6,15 +6,16 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import axe from 'axe-core';
+import ExcelJS from 'exceljs';
 import { chromium } from 'playwright';
 import { describe, expect, it } from 'vitest';
 import { resolveOptions } from '../src/config.js';
 import { auditViewport, runAudit, type AuditViewportDependencies } from '../src/audit/runner.js';
-import { runDomChecks, runKeyboardChecks, runLinkChecks, runResponsiveChecks } from '../src/audit/browser-checks.js';
+import { collectTabChecks, runDomChecks, runKeyboardChecks, runLinkChecks, runResponsiveChecks } from '../src/audit/browser-checks.js';
 import { runConfiguredJourneyChecks } from '../src/audit/journey-checks.js';
 import { buildCoverageMatrix } from '../src/audit/coverage.js';
 import { findingsFromPage } from '../src/audit/findings.js';
-import { detectInteractionBlocker } from '../src/audit/page-preparation.js';
+import { collectElementContexts, detectInteractionBlocker } from '../src/audit/page-preparation.js';
 import type { CoverageArea } from '../src/types.js';
 import { executeAudit } from '../src/service.js';
 import { DEFAULT_AUDITOR } from '../src/instructions.js';
@@ -94,6 +95,24 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
       { name: 'Keyboard', area: 'keyboard-only', override: { runKeyboardChecks: async () => { throw new Error('injected keyboard failure'); } } },
       { name: 'Disclosure', area: 'interactive-components', override: { runDisclosureChecks: async () => { throw new Error('injected disclosure failure'); } } },
       { name: 'Tab', area: 'interactive-components', override: { runTabChecks: async () => { throw new Error('injected tab failure'); } } },
+      {
+        name: 'Disclosure incomplete',
+        area: 'interactive-components',
+        override: {
+          runDisclosureChecks: async () => ({
+            results: [], candidateCount: 31, checkedCount: 30, truncated: false, completed: true
+          })
+        }
+      },
+      {
+        name: 'Tab incomplete',
+        area: 'interactive-components',
+        override: {
+          runTabChecks: async () => ({
+            results: [], candidateCount: 21, checkedCount: 20, truncated: false, completed: true
+          })
+        }
+      },
       { name: 'Link', area: 'broken-or-misleading-links', override: { runLinkChecks: async () => { throw new Error('injected link failure'); } } },
       { name: 'Element context', area: 'viewport-render', override: { collectElementContexts: async () => { throw new Error('injected context failure'); } } },
       { name: 'Screenshot', area: 'viewport-render', override: { captureElementScreenshots: async () => { throw new Error('injected screenshot failure'); } } }
@@ -125,11 +144,94 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
         expect(findings.some((finding) => finding.ruleId === 'axe-image-alt' && finding.classification === 'confirmed'), failure.name).toBe(true);
         expect(coverage.find((assessment) => assessment.area === 'automated-axe')?.status, failure.name).toBe('confirmed-failed');
         expect(coverage.find((assessment) => assessment.area === failure.area)?.status, failure.name).toBe('tested-inconclusive');
+        if (failure.name.endsWith('incomplete')) {
+          const checkId = failure.name.startsWith('Disclosure') ? 'disclosures' : 'tabs';
+          expect(audit.collectionOutcomes?.find((outcome) => outcome.checkId === checkId), failure.name)
+            .toEqual(expect.objectContaining({
+              status: 'failed',
+              observationCount: 0
+            }));
+          expect(audit.errors.some((error) => error.includes(
+            failure.name.startsWith('Disclosure') ? '30 of 31' : '20 of 21'
+          ))).toBe(true);
+        }
         if (failure.name === 'DOM') {
           expect(findings.some((finding) => finding.ruleId === 'missing-main-landmark'), failure.name).toBe(false);
           expect(findings.some((finding) => finding.ruleId === 'missing-h1'), failure.name).toBe(false);
         }
       }
+    } finally {
+      await browser.close();
+    }
+  }, 120_000);
+
+  it('proves tab behavior and reports safety-limit truncation instead of silently skipping tablists', async () => {
+    const channel = process.env.A11Y_TEST_BROWSER_CHANNEL ?? (process.platform === 'darwin' ? 'chrome' : undefined);
+    const browser = await chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
+    const page = await browser.newPage();
+    try {
+      await page.setContent(`<!doctype html><html lang="en"><head><title>Tab behavior</title></head><body>
+        <div role="tablist" aria-label="Working tabs" id="working-tabs">
+          <button role="tab" id="working-one" aria-selected="true" aria-controls="working-panel-one" tabindex="0">One</button>
+          <button role="tab" id="working-two" aria-selected="false" aria-controls="working-panel-two" tabindex="-1">Two</button>
+        </div>
+        <div role="tabpanel" id="working-panel-one" aria-labelledby="working-one">First panel</div>
+        <div role="tabpanel" id="working-panel-two" aria-labelledby="working-two" hidden>Second panel</div>
+        <div role="tablist" aria-label="Broken tabs" id="broken-tabs">
+          <button role="tab" id="broken-one" aria-selected="true" aria-controls="broken-panel-one" tabindex="0">One</button>
+          <button role="tab" id="broken-two" aria-selected="false" aria-controls="broken-panel-two" tabindex="-1">Two</button>
+        </div>
+        <div role="tabpanel" id="broken-panel-one" aria-labelledby="broken-one">First panel</div>
+        <div role="tabpanel" id="broken-panel-two" aria-labelledby="broken-two" hidden>Second panel</div>
+        <script>
+          document.getElementById('working-tabs').addEventListener('keydown', (event) => {
+            const tabs = [...event.currentTarget.querySelectorAll('[role=tab]')];
+            const activeIndex = tabs.indexOf(document.activeElement);
+            const nextIndex = event.key === 'ArrowRight' ? (activeIndex + 1) % tabs.length
+              : event.key === 'Home' ? 0
+              : event.key === 'End' ? tabs.length - 1
+              : -1;
+            if (nextIndex < 0) return;
+            event.preventDefault();
+            tabs.forEach((tab, index) => {
+              tab.setAttribute('aria-selected', String(index === nextIndex));
+              tab.tabIndex = index === nextIndex ? 0 : -1;
+            });
+            tabs[nextIndex].focus();
+          });
+        </script>
+      </body></html>`);
+      const behavior = await collectTabChecks(page);
+      expect(behavior).toEqual(expect.objectContaining({
+        candidateCount: 2,
+        checkedCount: 2,
+        truncated: false,
+        completed: true
+      }));
+      expect(behavior.results.find((result) => result.selector === '#working-tabs')).toEqual(expect.objectContaining({
+        navigationMovedToTab: true,
+        activationWorked: true,
+        homeMovedToFirst: true,
+        endMovedToLast: true
+      }));
+      expect(behavior.results.find((result) => result.selector === '#broken-tabs')).toEqual(expect.objectContaining({
+        navigationMovedToTab: false,
+        activationWorked: false
+      }));
+
+      await page.setContent(`<!doctype html><html lang="en"><head><title>Tab limit</title></head><body>${Array.from({ length: 21 }, (_, index) => `
+        <div role="tablist" aria-label="Tabs ${index + 1}">
+          <button role="tab" aria-selected="true" tabindex="0">One</button>
+          <button role="tab" aria-selected="false" tabindex="-1">Two</button>
+        </div>`).join('')}</body></html>`);
+      const limited = await collectTabChecks(page);
+      expect(limited).toEqual(expect.objectContaining({
+        candidateCount: 21,
+        checkedCount: 20,
+        truncated: true,
+        completed: false,
+        error: expect.stringContaining('20 of 21')
+      }));
     } finally {
       await browser.close();
     }
@@ -351,6 +453,41 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
     }
   });
 
+  it('measures a visually hidden file input through its visible label and describes it as an upload', async () => {
+    const channel = process.env.A11Y_TEST_BROWSER_CHANNEL ?? (process.platform === 'darwin' ? 'chrome' : undefined);
+    const browser = await chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
+    try {
+      const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
+      await page.setContent(`<!doctype html><html lang="en"><head><title>File upload target</title><style>
+        .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+        #resume-label { display: inline-flex; width: 160px; height: 40px; align-items: center; justify-content: center; }
+        #avatar-label { display: inline-block; width: 16px; height: 16px; }
+      </style></head><body>
+        <label id="resume-label" for="resume">Upload résumé</label><input class="visually-hidden" id="resume" type="file">
+        <label id="avatar-label" for="avatar">+</label><input class="visually-hidden" id="avatar" type="file">
+      </body></html>`);
+
+      const dom = await runDomChecks(page);
+      const contexts = await collectElementContexts(page, ['#resume']);
+
+      expect(dom.smallTargets.some((target) => target.selector === '#resume')).toBe(false);
+      expect(dom.smallTargets.find((target) => target.selector === '#avatar')).toEqual(expect.objectContaining({
+        measurementSelector: '#avatar-label',
+        name: '+',
+        width: 16,
+        height: 16
+      }));
+      expect(contexts).toEqual([expect.objectContaining({
+        selector: '#resume',
+        role: 'file upload',
+        accessibleName: 'Upload résumé',
+        componentName: '“Upload résumé” file upload'
+      })]);
+    } finally {
+      await browser.close();
+    }
+  });
+
   it('executes configured keyboard, form, interaction, and dynamic-content assertions', async () => {
     const channel = process.env.A11Y_TEST_BROWSER_CHANNEL ?? (process.platform === 'darwin' ? 'chrome' : undefined);
     const browser = await chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
@@ -444,6 +581,9 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
       ...(channel ? { channel } : {})
     });
     const result = await runAudit([url], 'fixture', [], options);
+    expect(result.scopeMode).toBe('supplied-pages-only');
+    expect(result.requestedUrls).toEqual([url]);
+    expect(result.pages.map((page) => page.url)).toEqual([url]);
     expect(result.auditedUrls).toEqual([url]);
     expect(result.findings.some((finding) => finding.ruleId.includes('image-alt') || finding.ruleId.includes('image-redundant-alt'))).toBe(true);
     expect(result.findings.some((finding) => finding.ruleId === 'form-field-no-label' || finding.ruleId === 'axe-label')).toBe(true);
@@ -859,6 +999,14 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
         ...(channel ? { channel } : {})
       }));
       const viewport = result.pages[0]!.viewports[0]!;
+      expect(viewport.partial).toBe(true);
+      expect(viewport.collectionOutcomes?.find((outcome) => outcome.checkId === 'disclosures')).toEqual(expect.objectContaining({
+        status: 'partial',
+        observationCount: 6,
+        candidateCount: 6,
+        checkedCount: 6,
+        truncated: false
+      }));
       const slow = viewport.disclosures.find((item) => item.selector === '#slow-toggle');
       expect(slow).toEqual(expect.objectContaining({
         activationTargetVerified: true,
@@ -901,6 +1049,74 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
       expect(result.findings.some((finding) => finding.ruleId === 'disclosure-focus-order')).toBe(false);
     } finally {
       await new Promise<void>((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
+    }
+  }, 120_000);
+
+  it('validates linked HTTP destinations without promoting them to audit targets', async () => {
+    let linkedDestinationRequests = 0;
+    const server = createServer((request, response) => {
+      if (request.url === '/linked-destination') {
+        linkedDestinationRequests += 1;
+        response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('Not found');
+        return;
+      }
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      response.end(`<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width"><title>No-crawl fixture</title></head><body>
+        <main><h1>Explicit audit target</h1><a id="linked-page" href="/linked-destination">Missing linked page</a></main>
+      </body></html>`);
+    });
+    await new Promise<void>((resolveListen) => server.listen(0, '127.0.0.1', resolveListen));
+    const outputDir = await mkdtemp(join(tmpdir(), 'a11y-no-crawl-'));
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Fixture server did not expose a TCP port.');
+      const rootUrl = `http://127.0.0.1:${address.port}/`;
+      const channel = process.env.A11Y_TEST_BROWSER_CHANNEL ?? (process.platform === 'darwin' ? 'chrome' : undefined);
+      const result = await executeAudit({
+        inputs: [rootUrl],
+        options: {
+          auditor: 'No-crawl Test Auditor',
+          outputDir,
+          allowedHosts: ['127.0.0.1'],
+          stagingOnly: false,
+          concurrency: 1,
+          captureScreenshots: false,
+          maxLinksPerPage: 10,
+          viewports: [
+            { name: 'desktop', width: 1200, height: 800 },
+            { name: 'mobile', width: 390, height: 844, isMobile: true }
+          ],
+          ...(channel ? { channel } : {})
+        }
+      });
+      const json = JSON.parse(await readFile(result.jsonPath, 'utf8')) as {
+        scopeMode: string;
+        requestedUrls: string[];
+        auditedUrls: string[];
+        pages: Array<{ url: string; viewports: unknown[] }>;
+        findings: Array<{ ruleId: string; issue: string }>;
+      };
+      expect(linkedDestinationRequests).toBeGreaterThan(0);
+      expect(json.findings).toContainEqual(expect.objectContaining({
+        ruleId: 'link-broken-destination',
+        issue: expect.stringContaining('HTTP 404')
+      }));
+      expect(json.scopeMode).toBe('supplied-pages-only');
+      expect(json.requestedUrls).toEqual([rootUrl]);
+      expect(json.auditedUrls).toEqual([rootUrl]);
+      expect(json.pages.map((page) => page.url)).toEqual([rootUrl]);
+      expect(json.pages[0]?.viewports).toHaveLength(2);
+
+      const html = await readFile(result.htmlPath, 'utf8');
+      expect(html).toContain('Supplied pages only (no crawl); links are never added as audit targets');
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(result.reportPath);
+      expect(String(workbook.getWorksheet('Audit Summary')?.getCell('A16').value))
+        .toContain('Scope mode: Supplied pages only (no crawl)');
+    } finally {
+      await new Promise<void>((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
+      await rm(outputDir, { recursive: true, force: true });
     }
   }, 120_000);
 
@@ -954,7 +1170,11 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
       expect(generatedScreenshots).toHaveLength(referencedScreenshots.size);
       expect(result.reportPath).toMatch(/Accessibility_Audit_Report\.xlsx$/);
       expect(result.htmlPath).toMatch(/Accessibility_Audit_Report\.html$/);
+      expect(result.csvPath).toMatch(/audit-findings\.csv$/);
+      expect(result.sarifPath).toMatch(/audit-results\.sarif$/);
       expect(await readFile(result.htmlPath, 'utf8')).toContain('<title>Accessibility audit report');
+      expect(await readFile(result.csvPath, 'utf8')).toContain('"id","fingerprint","classification","severity"');
+      expect(JSON.parse(await readFile(result.sarifPath, 'utf8'))).toEqual(expect.objectContaining({ version: '2.1.0' }));
       expect(Buffer.byteLength(await readFile(result.archivePath))).toBeGreaterThan(0);
     } finally {
       await new Promise<void>((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
@@ -1043,6 +1263,8 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
         expect(Date.now() - started).toBeLessThan(10_000);
         const partial = JSON.parse(await readFile(result.jsonPath, 'utf8')) as { status: string };
         expect(partial.status).toBe('cancelled');
+        expect(await readFile(result.csvPath, 'utf8')).toContain('"id","fingerprint","classification","severity"');
+        expect(JSON.parse(await readFile(result.sarifPath, 'utf8'))).toEqual(expect.objectContaining({ version: '2.1.0' }));
       } finally {
         clearTimeout(cancellation);
       }
@@ -1100,7 +1322,7 @@ describe.skipIf(process.env.RUN_BROWSER_INTEGRATION !== '1')('browser audit inte
       const [exitCode] = await once(child, 'exit') as [number | null, NodeJS.Signals | null];
 
       expect(exitCode).toBe(130);
-      expect(stderr).toContain('Stopped safely. Partial HTML, Excel, and JSON output is in');
+      expect(stderr).toContain('Stopped safely. Partial HTML, Excel, JSON, CSV, and SARIF output is in');
       expect(stderr).toContain('the portable ZIP is');
       const cliResult = JSON.parse(stdout) as { status: string; validation: { valid: boolean; auditor: string } };
       expect(cliResult.status).toBe('cancelled');

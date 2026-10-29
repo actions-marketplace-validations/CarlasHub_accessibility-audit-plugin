@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, readdir, unlink } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
-import { chromium, type Browser, type Locator, type Page } from 'playwright';
+import { chromium, firefox, webkit, type Browser, type BrowserType, type Locator, type Page } from 'playwright';
 import axe from 'axe-core';
 import type {
   AuditExecutionContext,
@@ -11,6 +11,7 @@ import type {
   AuditOptions,
   AuditProgressEvent,
   AuditSummary,
+  BrowserEngine,
   AxeRunMetadata,
   AxeViolationResult,
   ConsentHandlingResult,
@@ -25,13 +26,15 @@ import type {
   ViewportAudit
 } from '../types.js';
 import { REQUIRED_MANUAL_CHECKS } from './manual-checks.js';
-import { runDisclosureChecks, runDomChecks, runKeyboardChecks, runLinkChecks, runResponsiveChecks, runTabChecks } from './browser-checks.js';
+import { collectDisclosureChecks, collectTabChecks, runDomChecks, runKeyboardChecks, runLinkChecks, runResponsiveChecks } from './browser-checks.js';
 import { runConfiguredJourneyChecks } from './journey-checks.js';
 import { collectElementContexts, detectInteractionBlocker, dismissConsentBanner } from './page-preparation.js';
+import type { AuthenticationPreflightResult, VerifiedStorageState } from '../auth-preflight.js';
 import { findingsFromPage } from './findings.js';
 import { buildCoverageMatrix } from './coverage.js';
 import { buildWcagCriterionLedger } from './wcag-criteria.js';
 import { applyConfirmedFindingConfidenceGate, assertAuditQualityContract, AUDIT_QUALITY_CONTRACT } from './quality-contract.js';
+import { AUDIT_SCOPE_MODE } from '../scope.js';
 import { standardsForFinding } from './standards.js';
 import { assertCanonicalAuditSummary, assertCollectionCompleteness } from './canonical-validation.js';
 import { assertLosslessConsolidation, assertRemediationOnlyNotes, consolidateFindings } from '../reporting/consolidate.js';
@@ -43,6 +46,13 @@ import { urlRestrictionReason } from '../urls.js';
 const CANCELLED_REASON = 'The audit was stopped by the user. Results include only work completed before cancellation.';
 const MAX_CAPTURED_RUNTIME_ERRORS = 50;
 const require = createRequire(import.meta.url);
+const browserTypes: Record<BrowserEngine, BrowserType> = { chromium, firefox, webkit };
+
+export function browserEngineLabel(engine: BrowserEngine): string {
+  if (engine === 'firefox') return 'Firefox';
+  if (engine === 'webkit') return 'WebKit';
+  return 'Chromium';
+}
 
 export function isBrowserNetworkConsoleError(message: string): boolean {
   return /^Failed to load resource:\s+net::ERR_[A-Z0-9_]+$/i.test(message.trim());
@@ -114,12 +124,29 @@ export function createBrowserLaunchOptions(
   };
 }
 
+export function createBrowserContextOptions(
+  viewport: AuditOptions['viewports'][number],
+  storageState?: VerifiedStorageState
+): Parameters<Browser['newContext']>[0] {
+  return {
+    viewport: { width: viewport.width, height: viewport.height },
+    isMobile: viewport.isMobile ?? false,
+    deviceScaleFactor: 1,
+    reducedMotion: 'reduce',
+    colorScheme: 'light',
+    bypassCSP: true,
+    ...(storageState ? { storageState } : {})
+  };
+}
+
 export function browserLaunchCandidates(
-  options: Pick<AuditOptions, 'channel' | 'executablePath'>,
+  options: Pick<AuditOptions, 'channel' | 'executablePath'> & { browserEngine?: BrowserEngine },
   headless: boolean
 ): Array<Parameters<typeof chromium.launch>[0]> {
+  const browserEngine = options.browserEngine ?? 'chromium';
   const explicit = Boolean(options.channel || options.executablePath);
   if (explicit) return [createBrowserLaunchOptions(options, headless)];
+  if (browserEngine !== 'chromium') return [createBrowserLaunchOptions({}, headless)];
   return [
     createBrowserLaunchOptions({}, headless),
     createBrowserLaunchOptions({ channel: 'chrome' }, headless),
@@ -129,13 +156,14 @@ export function browserLaunchCandidates(
 
 export function isMissingBrowserExecutableError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /executable (?:doesn['’]t|does not) exist|browser executable|could not find.+(?:chrome|edge|chromium)|(?:browser|channel|chromium distribution).+not found|(?:please\s+)?run.+playwright install/i.test(message);
+  return /executable (?:doesn['’]t|does not) exist|browser executable|could not find.+(?:chrome|edge|chromium|firefox|webkit)|(?:browser|channel|chromium|firefox|webkit).+not found|(?:please\s+)?run.+playwright install/i.test(message);
 }
 
-export async function installPlaywrightChromium(signal?: AbortSignal): Promise<void> {
+export async function installPlaywrightBrowser(engine: BrowserEngine, signal?: AbortSignal): Promise<void> {
+  const label = browserEngineLabel(engine);
   const cli = require.resolve('playwright/cli');
   await new Promise<void>((resolveInstall, rejectInstall) => {
-    const child = spawn(process.execPath, [cli, 'install', 'chromium'], {
+    const child = spawn(process.execPath, [cli, 'install', engine], {
       env: process.env,
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -148,14 +176,18 @@ export async function installPlaywrightChromium(signal?: AbortSignal): Promise<v
     child.once('exit', (code, exitSignal) => {
       signal?.removeEventListener('abort', abort);
       if (signal?.aborted) {
-        rejectInstall(new Error('Chromium installation was cancelled.'));
+        rejectInstall(new Error(`${label} installation was cancelled.`));
       } else if (code === 0) {
         resolveInstall();
       } else {
-        rejectInstall(new Error(`Playwright Chromium installation failed${exitSignal ? ` with signal ${exitSignal}` : ` with exit code ${code ?? 'unknown'}`}.`));
+        rejectInstall(new Error(`Playwright ${label} installation failed${exitSignal ? ` with signal ${exitSignal}` : ` with exit code ${code ?? 'unknown'}`}.`));
       }
     });
   });
+}
+
+export async function installPlaywrightChromium(signal?: AbortSignal): Promise<void> {
+  await installPlaywrightBrowser('chromium', signal);
 }
 
 async function launchAuditBrowser(
@@ -163,10 +195,12 @@ async function launchAuditBrowser(
   execution: AuditExecutionContext
 ): Promise<Browser> {
   const candidates = browserLaunchCandidates(options, options.headless);
+  const browserType = browserTypes[options.browserEngine];
+  const label = browserEngineLabel(options.browserEngine);
   let lastMissingError: unknown;
   for (const candidate of candidates) {
     try {
-      return await chromium.launch(candidate);
+      return await browserType.launch(candidate);
     } catch (error) {
       if (!isMissingBrowserExecutableError(error)) throw error;
       lastMissingError = error;
@@ -181,16 +215,16 @@ async function launchAuditBrowser(
 
   if (!options.autoInstallBrowser) {
     throw new Error(
-      `No supported Chromium browser is available. Run "npx playwright install chromium" in the plugin directory or enable automatic browser installation. ${lastMissingError instanceof Error ? lastMissingError.message : ''}`.trim()
+      `No supported ${label} browser is available. Run "npx playwright install ${options.browserEngine}" in the plugin directory or enable automatic browser installation. ${lastMissingError instanceof Error ? lastMissingError.message : ''}`.trim()
     );
   }
 
   await emitProgress(execution, {
     phase: 'browser',
-    message: 'No supported browser was found. Installing headless Playwright Chromium once before the audit starts.'
+    message: `No supported browser was found. Installing headless Playwright ${label} once before the audit starts.`
   });
-  await installPlaywrightChromium(execution.signal);
-  return chromium.launch(createBrowserLaunchOptions({}, options.headless));
+  await installPlaywrightBrowser(options.browserEngine, execution.signal);
+  return browserType.launch(createBrowserLaunchOptions({}, options.headless));
 }
 
 async function runAxe(
@@ -427,13 +461,25 @@ function emptyConsent(): ConsentHandlingResult {
   };
 }
 
+export function unresolvedConsentInteractionBlocker(
+  consent: ConsentHandlingResult
+): InteractionBlocker | null {
+  if (!consent.found || consent.dismissed) return null;
+  return {
+    selector: consent.surfaceSelector || 'consent surface',
+    role: 'consent surface',
+    name: consent.buttonName ? `Consent choice: ${consent.buttonName}` : 'Visible consent surface',
+    reason: 'A visible consent surface remained active before page-level interaction tests.'
+  };
+}
+
 export interface AuditViewportDependencies {
   runAxe: typeof runAxe;
   runDomChecks: typeof runDomChecks;
   runKeyboardChecks: typeof runKeyboardChecks;
   runConfiguredJourneyChecks: typeof runConfiguredJourneyChecks;
-  runDisclosureChecks: typeof runDisclosureChecks;
-  runTabChecks: typeof runTabChecks;
+  runDisclosureChecks: typeof collectDisclosureChecks;
+  runTabChecks: typeof collectTabChecks;
   runResponsiveChecks: typeof runResponsiveChecks;
   runLinkChecks: typeof runLinkChecks;
   collectElementContexts: typeof collectElementContexts;
@@ -448,8 +494,8 @@ const defaultAuditViewportDependencies: AuditViewportDependencies = {
   runDomChecks,
   runKeyboardChecks,
   runConfiguredJourneyChecks,
-  runDisclosureChecks,
-  runTabChecks,
+  runDisclosureChecks: collectDisclosureChecks,
+  runTabChecks: collectTabChecks,
   runResponsiveChecks,
   runLinkChecks,
   collectElementContexts,
@@ -465,7 +511,7 @@ const defaultAuditViewportDependencies: AuditViewportDependencies = {
 function isPartialAudit(errors: string[], axeRun: AxeRunMetadata, blocker: InteractionBlocker | null): boolean {
   return Boolean(blocker)
     || !axeRun.completed
-    || errors.some((message) => /^(?:DOM|Keyboard|Configured journey|Disclosure|Tab|Responsive|Link|Element context|Screenshot) checks? error:/i.test(message));
+    || errors.some((message) => /^(?:DOM|Keyboard|Configured journey|Disclosure|Tab|Responsive|Link|Element context|Screenshot) checks? (?:error|incomplete):/i.test(message));
 }
 
 export async function auditViewport(
@@ -474,7 +520,8 @@ export async function auditViewport(
   options: AuditOptions,
   viewport: AuditOptions['viewports'][number],
   signal?: AbortSignal,
-  dependencyOverrides: Partial<AuditViewportDependencies> = {}
+  dependencyOverrides: Partial<AuditViewportDependencies> = {},
+  storageState?: VerifiedStorageState
 ): Promise<ViewportAudit> {
   const dependencies = { ...defaultAuditViewportDependencies, ...dependencyOverrides };
   const errors: string[] = [];
@@ -555,14 +602,7 @@ export async function auditViewport(
 
   try {
     if (signal?.aborted) throw new Error(CANCELLED_REASON);
-    context = await browser.newContext({
-      viewport: { width: viewport.width, height: viewport.height },
-      isMobile: viewport.isMobile ?? false,
-      deviceScaleFactor: 1,
-      reducedMotion: 'reduce',
-      colorScheme: 'light',
-      bypassCSP: true
-    });
+    context = await browser.newContext(createBrowserContextOptions(viewport, storageState));
     signal?.addEventListener('abort', closeOnAbort, { once: true });
     const page = await context.newPage();
     page.setDefaultTimeout(options.timeoutMs);
@@ -636,14 +676,7 @@ export async function auditViewport(
     consent = await dependencies.dismissConsentBanner(page);
     if (consent.error) errors.push(`Consent handling error: ${consent.error}`);
     interactionBlocker = await dependencies.detectInteractionBlocker(page);
-    if (!interactionBlocker && consent.found && !consent.dismissed) {
-      interactionBlocker = {
-        selector: consent.surfaceSelector || 'consent surface',
-        role: 'consent surface',
-        name: consent.buttonName ? `Consent choice: ${consent.buttonName}` : 'Visible consent surface',
-        reason: 'A visible consent surface remained active before page-level interaction tests.'
-      };
-    }
+    if (!interactionBlocker) interactionBlocker = unresolvedConsentInteractionBlocker(consent);
     if (interactionBlocker) errors.push(`${interactionBlocker.reason} ${interactionBlocker.selector}`);
     try {
       const axeOutput = await dependencies.runAxe(page, options.wcagLevel);
@@ -708,8 +741,27 @@ export async function auditViewport(
     }
     if (!interactionBlocker) {
       try {
-        disclosures = await dependencies.runDisclosureChecks(page);
-        recordOutcome('disclosures', { status: 'completed', observationCount: disclosures.length });
+        const disclosureOutput = await dependencies.runDisclosureChecks(page);
+        disclosures = disclosureOutput.results;
+        const disclosureTruncated = disclosureOutput.truncated
+          || disclosureOutput.checkedCount < disclosureOutput.candidateCount;
+        const disclosureCompleted = disclosureOutput.completed && !disclosureTruncated;
+        const disclosureError = disclosureCompleted ? undefined : disclosureOutput.error
+          ?? `The disclosure collector checked ${disclosureOutput.checkedCount} of ${disclosureOutput.candidateCount} eligible controls.`;
+        const disclosureRetainsEvidence = disclosures.length > 0;
+        recordOutcome('disclosures', {
+          status: disclosureCompleted ? 'completed' : disclosureRetainsEvidence ? 'partial' : 'failed',
+          observationCount: disclosures.length,
+          ...(disclosureCompleted || disclosureRetainsEvidence ? {
+            candidateCount: disclosureOutput.candidateCount,
+            checkedCount: disclosureOutput.checkedCount,
+            truncated: disclosureTruncated
+          } : {}),
+          ...(disclosureError ? { error: disclosureError } : {})
+        });
+        if (!disclosureCompleted) {
+          errors.push(`Disclosure checks incomplete: ${disclosureError}`);
+        }
       } catch (error) {
         const message = errorMessage(error);
         errors.push(`Disclosure checks error: ${message}`);
@@ -717,12 +769,30 @@ export async function auditViewport(
       }
     }
     for (const disclosure of disclosures.filter((item) => item.error)) {
-      errors.push(`Disclosure interaction check incomplete for “${disclosure.name || disclosure.selector}”: ${disclosure.error}`);
+      errors.push(`Disclosure evidence incomplete for “${disclosure.name || disclosure.selector}”: ${disclosure.error}`);
     }
     if (!interactionBlocker) {
       try {
-        tabs = await dependencies.runTabChecks(page);
-        recordOutcome('tabs', { status: 'completed', observationCount: tabs.length });
+        const tabOutput = await dependencies.runTabChecks(page);
+        tabs = tabOutput.results;
+        const tabTruncated = tabOutput.truncated || tabOutput.checkedCount < tabOutput.candidateCount;
+        const tabCompleted = tabOutput.completed && !tabTruncated;
+        const tabError = tabCompleted ? undefined : tabOutput.error
+          ?? `The tab collector checked ${tabOutput.checkedCount} of ${tabOutput.candidateCount} eligible tablists.`;
+        const tabRetainsEvidence = tabs.length > 0;
+        recordOutcome('tabs', {
+          status: tabCompleted ? 'completed' : tabRetainsEvidence ? 'partial' : 'failed',
+          observationCount: tabs.length,
+          ...(tabCompleted || tabRetainsEvidence ? {
+            candidateCount: tabOutput.candidateCount,
+            checkedCount: tabOutput.checkedCount,
+            truncated: tabTruncated
+          } : {}),
+          ...(tabError ? { error: tabError } : {})
+        });
+        if (!tabCompleted) {
+          errors.push(`Tab checks incomplete: ${tabError}`);
+        }
       } catch (error) {
         const message = errorMessage(error);
         errors.push(`Tab checks error: ${message}`);
@@ -925,7 +995,8 @@ async function auditPageBrowser(
   options: AuditOptions,
   execution: AuditExecutionContext,
   pageNumber: number,
-  pageTotal: number
+  pageTotal: number,
+  storageState?: VerifiedStorageState
 ): Promise<PageAudit> {
   const viewports: ViewportAudit[] = [];
   for (const viewport of options.viewports) {
@@ -938,7 +1009,7 @@ async function auditPageBrowser(
       url,
       viewport: viewport.name
     });
-    const result = await auditViewport(browser, url, options, viewport, execution.signal);
+    const result = await auditViewport(browser, url, options, viewport, execution.signal, {}, storageState);
     viewports.push(result);
     if (result.cancelled) break;
     await emitProgress(execution, {
@@ -1013,7 +1084,8 @@ export async function runAudit(
   source: string,
   skippedUrls: Array<{ url: string; reason: string }>,
   options: AuditOptions,
-  execution: AuditExecutionContext = {}
+  execution: AuditExecutionContext = {},
+  authentication: AuthenticationPreflightResult = { configured: false, scopedHostCount: 0 }
 ): Promise<AuditSummary> {
   await emitProgress(execution, {
     phase: 'browser',
@@ -1033,7 +1105,15 @@ export async function runAudit(
         urls,
         options.concurrency,
         execution.signal,
-        (url, index) => auditPageBrowser(browser!, url, options, execution, index + 1, urls.length)
+        (url, index) => auditPageBrowser(
+          browser!,
+          url,
+          options,
+          execution,
+          index + 1,
+          urls.length,
+          authentication.storageState
+        )
       );
     } finally {
       execution.signal?.removeEventListener('abort', closeOnAbort);
@@ -1064,10 +1144,12 @@ export async function runAudit(
   const aaaAdvisory = Boolean(options.aaaAdvisory || options.wcagLevel === 'AAA');
   const summary: AuditSummary = {
     status: cancelled ? 'cancelled' : 'completed',
+    scopeMode: AUDIT_SCOPE_MODE,
     ...(cancelled ? { cancelledAt: generatedAt } : {}),
     generatedAt,
     auditor: options.auditor,
     source,
+    browserEngine: options.browserEngine,
     wcagLevel: options.wcagLevel,
     conformanceTarget: 'AA',
     aaaAdvisory,

@@ -22,7 +22,7 @@ describe('embedded audit instructions', () => {
     expect(instructions).toContain(`Output directory: ${DEFAULT_OUTPUT_DIR}`);
     expect(instructions).toContain('preview.example.test');
     expect(instructions).toContain('run headlessly by default');
-    expect(instructions).toContain('write partial HTML and JSON plus a validated partial XLSX workbook');
+    expect(instructions).toContain('write partial HTML, JSON, CSV, and SARIF plus a validated partial XLSX workbook');
     expect(instructions).toContain('element screenshot');
     expect(instructions).toContain('both the authenticated request context and an in-page fetch agree');
     expect(instructions).toContain('relative hyperlinks in Findings and Evidence');
@@ -41,7 +41,7 @@ describe('embedded audit instructions', () => {
     expect(instructions).toContain('set every populated Findings row to Open');
     expect(instructions).toContain('populate Owner and Effort from the finding');
     expect(instructions).toContain('Explain the result in plain language');
-    expect(instructions).toContain('only supplied URLs were tested');
+    expect(instructions).toContain('only the user-selected or manually supplied unique URLs were tested');
     expect(instructions).toContain("Open workflow status from evidence confidence");
     expect(instructions).toContain('extract the ZIP');
   });
