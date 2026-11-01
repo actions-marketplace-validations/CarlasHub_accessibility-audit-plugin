@@ -86,7 +86,7 @@ jobs:
     steps:
       - name: Check out version-controlled audit inputs
         if: inputs.journeys-file != '' || inputs.baseline-path != '' || inputs.history-paths != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.7.0
       - id: audit
         name: Run WCAG 2.2 audit
         uses: CarlasHub/accessibility-audit-plugin@v1
@@ -106,7 +106,7 @@ jobs:
       - id: evidence
         name: Upload the complete report
         if: always() && steps.audit.outputs.output-dir != ''
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: accessibility-audit
           path: |
